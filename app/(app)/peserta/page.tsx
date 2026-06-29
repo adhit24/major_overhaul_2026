@@ -25,7 +25,9 @@ export default async function PesertaPage({
     const term = params.q.trim();
     query = query.or(`nama.ilike.%${term}%,no_badge.ilike.%${term}%,no_erp.ilike.%${term}%`);
   }
-  if (params.departemen) {
+  if (params.departemen === "__PERLU_VERIFIKASI__") {
+    query = query.is("departemen", null);
+  } else if (params.departemen) {
     query = query.eq("departemen", params.departemen);
   }
   if (params.status) {
@@ -66,6 +68,7 @@ export default async function PesertaPage({
                       {d}
                     </option>
                   ))}
+                  <option value="__PERLU_VERIFIKASI__">Perlu Verifikasi</option>
                 </select>
               </div>
               <div>
@@ -108,13 +111,15 @@ export default async function PesertaPage({
                     <td className="py-2 pr-4 font-medium text-slate-800">{p.nama}</td>
                     <td className="py-2 pr-4 text-slate-600">{p.no_erp ?? "-"}</td>
                     <td className="py-2 pr-4 text-slate-600">{p.no_badge ?? "-"}</td>
-                    <td className="py-2 pr-4 text-slate-600">{p.departemen}</td>
+                    <td className="py-2 pr-4 text-slate-600">
+                      {p.departemen ?? <span className="badge-pill bg-orange-50 text-orange-700">Perlu Verifikasi</span>}
+                    </td>
                     <td className="py-2 pr-4 text-slate-600">{p.kategori ?? "-"}</td>
                     <td className="py-2 pr-4 text-slate-600">{p.leader ?? "-"}</td>
                     <td className="py-2 pr-4">
                       <StatusBadge status={p.status_badge} />
                     </td>
-                    <td className="py-2 pr-4 text-slate-600">{p.tanggal_induction}</td>
+                    <td className="py-2 pr-4 text-slate-600">{p.tanggal_induction ?? "-"}</td>
                   </tr>
                 ))}
                 {!peserta?.length ? (

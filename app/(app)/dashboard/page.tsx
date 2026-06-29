@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { TopBar } from "@/components/TopBar";
 import { StatCard } from "@/components/StatCard";
@@ -13,10 +14,11 @@ export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
 
-  const [totalPeserta, totalBadge, totalPending, deposits, recentPeserta] = await Promise.all([
+  const [totalPeserta, totalBadge, totalPending, totalPerluVerifikasi, deposits, recentPeserta] = await Promise.all([
     supabase.from("peserta").select("*", { count: "exact", head: true }),
     supabase.from("peserta").select("*", { count: "exact", head: true }).not("no_badge", "is", null),
     supabase.from("peserta").select("*", { count: "exact", head: true }).eq("status_badge", "PENDING"),
+    supabase.from("peserta").select("*", { count: "exact", head: true }).is("departemen", null),
     supabase.from("deposit_batch").select("total_deposit"),
     supabase
       .from("peserta")
@@ -31,7 +33,7 @@ export default async function DashboardPage() {
     <>
       <TopBar title="Dashboard" email={userData.user?.email} />
       <main className="flex-1 space-y-6 p-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <StatCard label="Total Peserta" value={totalPeserta.count ?? 0} />
           <StatCard label="Sudah Ada Badge" value={totalBadge.count ?? 0} tone="success" />
           <StatCard
@@ -39,6 +41,14 @@ export default async function DashboardPage() {
             value={totalPending.count ?? 0}
             tone={totalPending.count ? "warning" : "default"}
           />
+          <Link href="/peserta?departemen=__PERLU_VERIFIKASI__" className="block">
+            <StatCard
+              label="Departemen Perlu Verifikasi"
+              value={totalPerluVerifikasi.count ?? 0}
+              tone={totalPerluVerifikasi.count ? "warning" : "default"}
+              hint="Klik untuk lihat daftarnya"
+            />
+          </Link>
           <StatCard label="Total Deposit Tercatat" value={formatRupiah(totalDeposit)} hint={`${deposits.data?.length ?? 0} batch`} />
         </div>
 
@@ -64,12 +74,14 @@ export default async function DashboardPage() {
                 {(recentPeserta.data ?? []).map((p) => (
                   <tr key={p.id} className="border-b border-slate-50">
                     <td className="py-2 pr-4 font-medium text-slate-800">{p.nama}</td>
-                    <td className="py-2 pr-4 text-slate-600">{p.departemen}</td>
+                    <td className="py-2 pr-4 text-slate-600">
+                      {p.departemen ?? <span className="badge-pill bg-orange-50 text-orange-700">Perlu Verifikasi</span>}
+                    </td>
                     <td className="py-2 pr-4 text-slate-600">{p.no_badge ?? "-"}</td>
                     <td className="py-2 pr-4">
                       <StatusBadge status={p.status_badge} />
                     </td>
-                    <td className="py-2 pr-4 text-slate-600">{p.tanggal_induction}</td>
+                    <td className="py-2 pr-4 text-slate-600">{p.tanggal_induction ?? "-"}</td>
                   </tr>
                 ))}
                 {(recentPeserta.data ?? []).length === 0 ? (
