@@ -14,12 +14,11 @@ export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
 
-  const [totalPeserta, totalBadge, totalPending, totalPerluVerifikasi, deposits, recentPeserta] = await Promise.all([
-    supabase.from("peserta").select("*", { count: "exact", head: true }),
+  const [totalBadge, totalPending, totalPerluVerifikasi, deposits, recentPeserta] = await Promise.all([
     supabase.from("peserta").select("*", { count: "exact", head: true }).not("no_badge", "is", null),
     supabase.from("peserta").select("*", { count: "exact", head: true }).eq("status_badge", "PENDING"),
     supabase.from("peserta").select("*", { count: "exact", head: true }).is("departemen", null),
-    supabase.from("deposit_batch").select("total_deposit"),
+    supabase.from("deposit_batch").select("jumlah_kartu, total_deposit, status_batch"),
     supabase
       .from("peserta")
       .select("id, nama, departemen, no_badge, status_badge, tanggal_induction")
@@ -27,14 +26,17 @@ export default async function DashboardPage() {
       .limit(8),
   ]);
 
-  const totalDeposit = (deposits.data ?? []).reduce((sum, row) => sum + Number(row.total_deposit ?? 0), 0);
+  const allBatches   = deposits.data ?? [];
+  const doneBatches  = allBatches.filter((b) => b.status_batch === "DONE");
+  const totalKartu   = doneBatches.reduce((s, b) => s + Number(b.jumlah_kartu ?? 0), 0);
+  const totalDeposit = doneBatches.reduce((sum, row) => sum + Number(row.total_deposit ?? 0), 0);
 
   return (
     <>
       <TopBar title="Dashboard" email={userData.user?.email} />
       <main className="flex-1 space-y-6 p-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <StatCard label="Total Peserta" value={totalPeserta.count ?? 0} />
+          <StatCard label="Total Kartu Diajukan" value={totalKartu} hint="batch DONE" />
           <StatCard label="Sudah Ada Badge" value={totalBadge.count ?? 0} tone="success" />
           <StatCard
             label="Belum Ada Badge (PENDING)"
@@ -49,7 +51,7 @@ export default async function DashboardPage() {
               hint="Klik untuk lihat daftarnya"
             />
           </Link>
-          <StatCard label="Total Deposit Tercatat" value={formatRupiah(totalDeposit)} hint={`${deposits.data?.length ?? 0} batch`} />
+          <StatCard label="Total Deposit Tercatat" value={formatRupiah(totalDeposit)} hint={`${doneBatches.length} batch DONE`} />
         </div>
 
         <div className="card">
