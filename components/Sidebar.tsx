@@ -14,14 +14,8 @@ export function Sidebar() {
 
   return (
     <aside className="hidden w-60 flex-col border-r border-slate-200 bg-white px-4 py-6 sm:flex">
-      <div className="mb-8 flex items-center gap-2 px-2">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-sm font-bold text-white">
-          PK
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-slate-900">PT KOIN</p>
-          <p className="text-xs text-slate-500">Induction &amp; Badge</p>
-        </div>
+      <div className="mb-8 px-2">
+        <img src="/logo_koin.png" alt="PT KOIN" className="h-10 w-auto object-contain" />
       </div>
 
       <nav className="flex flex-1 flex-col gap-1">
