@@ -14,22 +14,50 @@ const DEPT_STYLE: Record<string, { card: string; badge: string; dot: string }> =
   "SUPPORTING": { card: "border-slate-200  bg-slate-50   hover:bg-slate-100",    badge: "bg-slate-100  text-slate-600",    dot: "bg-slate-400"  },
 };
 
+const SORTABLE: Record<string, string> = {
+  no_badge:          "NO BADGE",
+  nama:              "NAMA",
+  status_badge:      "STATUS",
+  kategori:          "KATEGORI",
+  no_erp:            "NO ERP",
+  job_no:            "JOB NO",
+  jabatan_deskripsi: "JABATAN",
+  leader:            "LEADER",
+  tanggal_induction: "TGL INDUCTION",
+  due_date:          "DUE DATE",
+};
+
+function SortIcon({ active, asc }: { active: boolean; asc: boolean }) {
+  if (!active) return (
+    <span className="ml-1 text-slate-300 text-[10px]">↕</span>
+  );
+  return (
+    <span className="ml-1 text-brand-500 text-[10px]">{asc ? "↑" : "↓"}</span>
+  );
+}
+
 export default async function ManpowerPage({
   searchParams,
 }: {
-  searchParams: Promise<{ dept?: string }>;
+  searchParams: Promise<{ dept?: string; sort?: string; dir?: string }>;
 }) {
-  const { dept } = await searchParams;
+  const { dept, sort: sortParam, dir: dirParam } = await searchParams;
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
 
-  // Satu query ringan untuk semua count
-  const { data: allPeserta } = await supabase
-    .from("peserta")
-    .select("id, departemen, status_badge");
+  // Validasi sort param
+  const sortCol = sortParam && SORTABLE[sortParam] ? sortParam : "no_badge";
+  const sortAsc = dirParam !== "desc";
+
+  // Pagination: Supabase cap 1000 baris/request, ambil dua batch parallel
+  const [batch1, batch2] = await Promise.all([
+    supabase.from("peserta").select("id, departemen, status_badge").range(0, 999),
+    supabase.from("peserta").select("id, departemen, status_badge").range(1000, 1999),
+  ]);
+  const allPeserta = [...(batch1.data ?? []), ...(batch2.data ?? [])];
 
   const deptStats = DEPARTEMEN.map((d) => {
-    const list = (allPeserta ?? []).filter((p) => p.departemen === d);
+    const list = allPeserta.filter((p) => p.departemen === d);
     return {
       dept: d,
       total:    list.length,
@@ -39,30 +67,38 @@ export default async function ManpowerPage({
     };
   });
 
-  const totalAll = (allPeserta ?? []).length;
+  const totalAll = allPeserta.length;
 
-  // Query lengkap untuk dept yang dipilih
+  // Query detail worker dengan sort & pagination
   let workers: Record<string, unknown>[] | null = null;
   if (dept) {
-    const { data } = await supabase
-      .from("peserta")
-      .select("id, no_badge, nama, kategori, no_erp, job_no, jabatan_deskripsi, leader, tanggal_induction, due_date, status_badge, ktp, sks, sertifikat, remarks")
-      .eq("departemen", dept)
-      .order("no_badge", { ascending: true, nullsFirst: false });
-    workers = data ?? [];
+    const cols = "id, no_badge, nama, kategori, no_erp, job_no, jabatan_deskripsi, leader, tanggal_induction, due_date, status_badge, ktp, sks, sertifikat, remarks";
+    const orderOpt = { ascending: sortAsc, nullsFirst: false };
+    const [wb1, wb2] = await Promise.all([
+      supabase.from("peserta").select(cols).eq("departemen", dept).order(sortCol, orderOpt).range(0, 999),
+      supabase.from("peserta").select(cols).eq("departemen", dept).order(sortCol, orderOpt).range(1000, 1999),
+    ]);
+    workers = [...(wb1.data ?? []), ...(wb2.data ?? [])];
   }
 
   const selectedStyle = dept ? (DEPT_STYLE[dept] ?? DEPT_STYLE["SUPPORTING"]) : null;
+
+  // Helper: buat URL sort — toggle asc/desc jika kolom sama
+  function sortUrl(col: string) {
+    const newDir = col === sortCol && sortAsc ? "desc" : "asc";
+    return `/manpower?dept=${encodeURIComponent(dept ?? "")}&sort=${col}&dir=${newDir}`;
+  }
 
   return (
     <>
       <TopBar title="Manpower per Divisi" email={userData.user?.email} />
       <main className="flex-1 space-y-6 p-4 sm:p-6">
 
-        {/* Header stat */}
+        {/* Header */}
         <div className="flex items-center justify-between">
           <p className="text-sm text-slate-500">
-            Total seluruh divisi: <span className="font-semibold text-slate-800">{totalAll} orang</span>
+            Total seluruh divisi:{" "}
+            <span className="font-semibold text-slate-800">{totalAll} orang</span>
           </p>
           {dept && (
             <Link href="/manpower" className="text-xs text-slate-400 hover:text-slate-700 transition-colors">
@@ -109,6 +145,9 @@ export default async function ManpowerPage({
                   {dept}
                 </span>
                 <span className="text-sm text-slate-500">{workers.length} orang</span>
+                <span className="text-xs text-slate-400">
+                  · diurutkan: <span className="font-medium text-slate-600">{SORTABLE[sortCol]}</span> {sortAsc ? "↑" : "↓"}
+                </span>
               </div>
               <Link href="/manpower" className="text-xs text-slate-400 hover:text-slate-700">
                 Tutup ×
@@ -118,19 +157,20 @@ export default async function ManpowerPage({
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
                 <thead>
-                  <tr className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                    <th className="px-5 py-3 whitespace-nowrap">No Badge</th>
-                    <th className="px-4 py-3">Nama</th>
-                    <th className="px-4 py-3 whitespace-nowrap">Status</th>
-                    <th className="px-4 py-3 whitespace-nowrap">Kategori</th>
-                    <th className="px-4 py-3 whitespace-nowrap">No ERP</th>
-                    <th className="px-4 py-3 whitespace-nowrap">Job No</th>
-                    <th className="px-4 py-3">Jabatan</th>
-                    <th className="px-4 py-3">Leader</th>
-                    <th className="px-4 py-3 whitespace-nowrap">Tgl Induction</th>
-                    <th className="px-4 py-3 whitespace-nowrap">Due Date</th>
-                    <th className="px-4 py-3 text-center">Dok</th>
-                    <th className="px-4 py-3">Remarks</th>
+                  <tr className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none">
+                    {(Object.entries(SORTABLE) as [string, string][]).map(([col, label]) => (
+                      <th key={col} className="whitespace-nowrap px-4 py-3 first:px-5">
+                        <Link
+                          href={sortUrl(col)}
+                          className="inline-flex items-center hover:text-slate-700 transition-colors cursor-pointer"
+                        >
+                          {label}
+                          <SortIcon active={sortCol === col} asc={sortAsc} />
+                        </Link>
+                      </th>
+                    ))}
+                    <th className="px-4 py-3 text-center whitespace-nowrap">DOK</th>
+                    <th className="px-4 py-3 whitespace-nowrap">REMARKS</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -172,9 +212,9 @@ export default async function ManpowerPage({
                         <td className="px-4 py-2.5 text-slate-500 whitespace-nowrap">{(p.due_date as string | null) ?? "—"}</td>
                         <td className="px-4 py-2.5 text-center">
                           <span className="flex items-center justify-center gap-1">
-                            {p.ktp   ? <span title="KTP"        className="text-[10px] rounded bg-emerald-100 text-emerald-700 px-1 py-0.5 font-semibold">KTP</span>  : null}
-                            {p.sks   ? <span title="SKS"        className="text-[10px] rounded bg-blue-100   text-blue-700   px-1 py-0.5 font-semibold">SKS</span>  : null}
-                            {p.sertifikat ? <span title="Sertifikat" className="text-[10px] rounded bg-violet-100 text-violet-700 px-1 py-0.5 font-semibold">SERT</span> : null}
+                            {p.ktp        ? <span className="text-[10px] rounded bg-emerald-100 text-emerald-700 px-1 py-0.5 font-semibold">KTP</span>  : null}
+                            {p.sks        ? <span className="text-[10px] rounded bg-blue-100   text-blue-700   px-1 py-0.5 font-semibold">SKS</span>  : null}
+                            {p.sertifikat ? <span className="text-[10px] rounded bg-violet-100 text-violet-700 px-1 py-0.5 font-semibold">SERT</span> : null}
                             {!p.ktp && !p.sks && !p.sertifikat ? <span className="text-slate-300 text-xs">—</span> : null}
                           </span>
                         </td>
@@ -188,14 +228,13 @@ export default async function ManpowerPage({
               </table>
             </div>
 
-            {/* Footer count */}
             <div className="border-t border-slate-100 bg-slate-50 px-5 py-3 text-xs text-slate-500">
-              Menampilkan <span className="font-semibold text-slate-700">{workers.length}</span> orang di divisi {dept}
+              Menampilkan <span className="font-semibold text-slate-700">{workers.length}</span> orang
+              · klik header kolom untuk mengurutkan
             </div>
           </div>
         )}
 
-        {/* Placeholder jika belum ada dept dipilih */}
         {!dept && (
           <div className="rounded-xl border-2 border-dashed border-slate-200 p-10 text-center">
             <p className="text-sm text-slate-400">Klik salah satu divisi di atas untuk melihat detail man power</p>
