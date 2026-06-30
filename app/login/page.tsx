@@ -14,7 +14,7 @@ export default async function LoginPage({
       {/* Background photo PLTU */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url('/background_pltu.png')" }}
+        style={{ backgroundImage: "url('https://sxqsvogwsucuzdjcoqzf.supabase.co/storage/v1/object/public/assets/background_pltu.png')" }}
       />
       {/* Blur + dark overlay */}
       <div className="absolute inset-0 backdrop-blur-sm bg-black/55" />
