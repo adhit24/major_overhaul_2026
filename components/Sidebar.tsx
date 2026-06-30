@@ -4,9 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", icon: "📊" },
-  { href: "/peserta", label: "Database Peserta", icon: "👥" },
-  { href: "/deposit", label: "Summary Deposit", icon: "💳" },
+  { href: "/dashboard",  label: "Dashboard",        icon: "📊" },
+  { href: "/peserta",    label: "Database Peserta",  icon: "👥" },
+  { href: "/manpower",   label: "Manpower Divisi",   icon: "🏭" },
+  { href: "/deposit",    label: "Summary Deposit",   icon: "💳" },
 ];
 
 export function Sidebar() {
