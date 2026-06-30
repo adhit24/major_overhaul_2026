@@ -34,7 +34,7 @@ export default async function DashboardPage() {
   return (
     <>
       <TopBar title="Dashboard" email={userData.user?.email} />
-      <main className="flex-1 space-y-6 p-6">
+      <main className="flex-1 space-y-6 p-4 sm:p-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <StatCard label="Total Kartu Diajukan" value={totalKartu} hint="batch DONE" />
           <StatCard label="Sudah Ada Badge" value={totalBadge.count ?? 0} tone="success" />

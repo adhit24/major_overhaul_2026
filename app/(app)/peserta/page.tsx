@@ -39,7 +39,7 @@ export default async function PesertaPage({
   return (
     <>
       <TopBar title="Database Peserta" email={userData.user?.email} />
-      <main className="flex-1 space-y-4 p-6">
+      <main className="flex-1 space-y-4 p-4 sm:p-6">
         {params.saved ? (
           <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
             Data peserta berhasil disimpan.
@@ -47,21 +47,21 @@ export default async function PesertaPage({
         ) : null}
 
         <div className="card">
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-            <form className="flex flex-wrap items-end gap-3" method="get">
-              <div>
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+            <form className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end sm:gap-3" method="get">
+              <div className="w-full sm:w-auto">
                 <label className="label-field">Cari</label>
                 <input
                   type="text"
                   name="q"
                   defaultValue={params.q}
                   placeholder="Nama / No Badge / No ERP"
-                  className="input-field w-56"
+                  className="input-field w-full sm:w-56"
                 />
               </div>
-              <div>
+              <div className="w-full sm:w-auto">
                 <label className="label-field">Departemen</label>
-                <select name="departemen" defaultValue={params.departemen ?? ""} className="input-field w-40">
+                <select name="departemen" defaultValue={params.departemen ?? ""} className="input-field w-full sm:w-40">
                   <option value="">Semua</option>
                   {DEPARTEMEN.map((d) => (
                     <option key={d} value={d}>
@@ -71,9 +71,9 @@ export default async function PesertaPage({
                   <option value="__PERLU_VERIFIKASI__">Perlu Verifikasi</option>
                 </select>
               </div>
-              <div>
+              <div className="w-full sm:w-auto">
                 <label className="label-field">Status Badge</label>
-                <select name="status" defaultValue={params.status ?? ""} className="input-field w-40">
+                <select name="status" defaultValue={params.status ?? ""} className="input-field w-full sm:w-40">
                   <option value="">Semua</option>
                   {STATUS_BADGE.map((s) => (
                     <option key={s} value={s}>
@@ -82,11 +82,11 @@ export default async function PesertaPage({
                   ))}
                 </select>
               </div>
-              <button type="submit" className="btn-secondary">
+              <button type="submit" className="btn-secondary w-full sm:w-auto">
                 Filter
               </button>
             </form>
-            <Link href="/peserta/baru" className="btn-primary">
+            <Link href="/peserta/baru" className="btn-primary justify-center">
               + Input Peserta Baru
             </Link>
           </div>

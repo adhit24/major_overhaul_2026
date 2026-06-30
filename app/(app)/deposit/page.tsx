@@ -37,7 +37,7 @@ export default async function DepositPage({
     <>
       <TopBar title="Summary Deposit" email={userData.user?.email} />
 
-      <main className="flex-1 space-y-6 p-6 pb-10">
+      <main className="flex-1 space-y-6 p-4 pb-10 sm:p-6">
 
         {/* ── Alerts ── */}
         {params.saved && (
@@ -55,21 +55,21 @@ export default async function DepositPage({
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           <div className="card text-center">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Batch</p>
-            <p className="mt-2 text-3xl font-bold text-slate-800">{batches?.length ?? 0}</p>
+            <p className="mt-2 text-2xl font-bold text-slate-800 sm:text-3xl">{batches?.length ?? 0}</p>
           </div>
           <div className="card text-center">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Kartu</p>
-            <p className="mt-2 text-3xl font-bold text-slate-800">{totalKartu.toLocaleString("id-ID")}</p>
+            <p className="mt-2 text-2xl font-bold text-slate-800 sm:text-3xl">{totalKartu.toLocaleString("id-ID")}</p>
             <p className="mt-1 text-xs text-slate-400">DONE: {doneKartu}</p>
           </div>
           <div className="card text-center">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Deposit</p>
-            <p className="mt-2 text-2xl font-bold text-slate-800">{formatRupiah(totalDeposit)}</p>
+            <p className="mt-2 text-lg font-bold text-slate-800 sm:text-2xl">{formatRupiah(totalDeposit)}</p>
             <p className="mt-1 text-xs text-slate-400">DONE: {formatRupiah(doneDeposit)}</p>
           </div>
           <div className="card text-center">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Tarif / Kartu</p>
-            <p className="mt-2 text-2xl font-bold text-emerald-600">Rp 50.000</p>
+            <p className="mt-2 text-lg font-bold text-emerald-600 sm:text-2xl">Rp 50.000</p>
           </div>
         </div>
 
