@@ -114,8 +114,22 @@ export function LoginCard({ error, loginAction }: Props) {
         {/* Login card */}
         <motion.div
           {...fadeUp(0.25)}
-          className="rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl shadow-black/50 px-8 pb-8 pt-7"
+          className="relative rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl shadow-black/50 px-8 pb-8 pt-7"
         >
+          {/* BETA badge — pojok kanan atas */}
+          <motion.div
+            initial={{ scale: 0, rotate: -15, opacity: 0 }}
+            animate={{ scale: 1, rotate: 0,   opacity: 1 }}
+            transition={{ type: 'spring', delay: 0.55, stiffness: 260, damping: 14 }}
+            className="absolute -top-3 -right-3"
+          >
+            <span className="absolute inset-0 rounded-full bg-orange-400 opacity-60 animate-ping" />
+            <span className="relative flex items-center gap-1 rounded-full bg-orange-500 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-widest text-white shadow-lg shadow-orange-500/60 ring-2 ring-orange-300/40">
+              <span className="h-1.5 w-1.5 rounded-full bg-white/80 animate-pulse" />
+              BETA
+            </span>
+          </motion.div>
+
           <p className="mb-6 text-center text-[11px] font-semibold uppercase tracking-[0.18em] text-white/50">
             Login Sistem
           </p>
