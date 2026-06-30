@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -63,6 +64,8 @@ interface Props {
 }
 
 export function LoginCard({ error, loginAction }: Props) {
+  const [showPass, setShowPass] = useState(false);
+
   return (
     <main className="relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-8">
       <div
@@ -145,8 +148,27 @@ export function LoginCard({ error, loginAction }: Props) {
               <label htmlFor="password" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-white/70">
                 Password
               </label>
-              <input id="password" name="password" type="password" required autoComplete="current-password"
-                className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white placeholder-white/30 backdrop-blur-sm outline-none focus:border-orange-400/70 focus:ring-2 focus:ring-orange-400/30 transition-all duration-200" />
+              <div className="relative">
+                <input id="password" name="password" type={showPass ? 'text' : 'password'} required autoComplete="current-password"
+                  className="w-full rounded-xl border border-white/20 bg-white/10 px-4 py-3 pr-11 text-sm text-white placeholder-white/30 backdrop-blur-sm outline-none focus:border-orange-400/70 focus:ring-2 focus:ring-orange-400/30 transition-all duration-200" />
+                <button
+                  type="button"
+                  onClick={() => setShowPass((p) => !p)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/80 transition-colors"
+                  aria-label={showPass ? 'Sembunyikan password' : 'Tampilkan password'}
+                >
+                  {showPass ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0 1 12 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 0 1 1.563-3.029m5.858.908a3 3 0 1 1 4.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88 6.59 6.59m7.532 7.532 3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0 1 12 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 0 1-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </motion.div>
             {error ? (
               <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }}
