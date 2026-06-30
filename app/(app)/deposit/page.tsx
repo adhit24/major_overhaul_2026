@@ -3,6 +3,7 @@ import { TopBar } from "@/components/TopBar";
 import { StatusBadge } from "@/components/StatusBadge";
 import { DEPARTEMEN_SECTION, STATUS_BATCH } from "@/lib/constants";
 import { createDepositBatch } from "./actions";
+import { SubmitButton } from "@/components/SubmitButton";
 
 export const dynamic = "force-dynamic";
 
@@ -123,7 +124,7 @@ export default async function DepositPage({
               <input name="remarks" className="input-field" />
             </div>
             <div className="sm:col-span-1 flex items-end">
-              <button type="submit" className="btn-primary w-full">Simpan</button>
+              <SubmitButton className="btn-primary w-full" pendingText="Menyimpan...">Simpan</SubmitButton>
             </div>
           </form>
         </div>

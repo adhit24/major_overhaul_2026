@@ -1,5 +1,6 @@
 import { logout } from "@/app/(app)/actions";
 import { CommandPalette } from "./CommandPalette";
+import { SubmitButton } from "./SubmitButton";
 
 export function TopBar({ title, email }: { title: string; email?: string }) {
   return (
@@ -9,9 +10,9 @@ export function TopBar({ title, email }: { title: string; email?: string }) {
         <CommandPalette />
         {email ? <span className="hidden text-sm text-slate-400 md:inline">{email}</span> : null}
         <form action={logout}>
-          <button type="submit" className="btn-secondary text-xs">
+          <SubmitButton className="btn-secondary text-xs" pendingText="Keluar...">
             Keluar
-          </button>
+          </SubmitButton>
         </form>
       </div>
     </header>

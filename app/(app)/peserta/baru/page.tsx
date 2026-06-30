@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { TopBar } from "@/components/TopBar";
 import { DEPARTEMEN, KATEGORI, STATUS_BADGE } from "@/lib/constants";
 import { createPeserta } from "../actions";
+import { SubmitButton } from "@/components/SubmitButton";
 
 export default async function PesertaBaruPage({
   searchParams,
@@ -121,9 +122,9 @@ export default async function PesertaBaruPage({
             <a href="/peserta" className="btn-secondary">
               Batal
             </a>
-            <button type="submit" className="btn-primary">
+            <SubmitButton className="btn-primary" pendingText="Menyimpan...">
               Simpan &amp; Validasi
-            </button>
+            </SubmitButton>
           </div>
         </form>
       </main>

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { TopBar } from "@/components/TopBar";
 import { StatusBadge } from "@/components/StatusBadge";
 import { DEPARTEMEN, STATUS_BADGE } from "@/lib/constants";
+import { SubmitButton } from "@/components/SubmitButton";
 
 export const dynamic = "force-dynamic";
 
@@ -82,9 +83,9 @@ export default async function PesertaPage({
                   ))}
                 </select>
               </div>
-              <button type="submit" className="btn-secondary w-full sm:w-auto">
+              <SubmitButton className="btn-secondary w-full sm:w-auto" pendingText="Memfilter...">
                 Filter
-              </button>
+              </SubmitButton>
             </form>
             <Link href="/peserta/baru" className="btn-primary justify-center">
               + Input Peserta Baru
