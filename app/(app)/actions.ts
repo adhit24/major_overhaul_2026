@@ -10,6 +10,14 @@ export async function logout() {
   redirect("/login");
 }
 
+export async function deletePeserta(id: number) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("peserta").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/manpower");
+  revalidatePath("/peserta");
+}
+
 export async function updatePeserta(
   id: number,
   data: {

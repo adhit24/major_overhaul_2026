@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { updatePeserta } from '@/app/(app)/actions';
+import { useState, useTransition, useRef } from 'react';
+import { updatePeserta, deletePeserta } from '@/app/(app)/actions';
+
+const ADMIN_PIN = '242424';
 
 type Peserta = {
   id: number;
@@ -43,6 +45,34 @@ function EditModal({ peserta, onClose }: { peserta: Peserta; onClose: () => void
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // PIN delete flow
+  const [showPinPrompt, setShowPinPrompt] = useState(false);
+  const [pin, setPin]           = useState('');
+  const [pinError, setPinError] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleted, setDeleted]   = useState(false);
+  const pinRef = useRef<HTMLInputElement>(null);
+
+  function openPinPrompt() {
+    setPin(''); setPinError(''); setShowPinPrompt(true);
+    setTimeout(() => pinRef.current?.focus(), 50);
+  }
+
+  function handleDelete() {
+    if (pin !== ADMIN_PIN) { setPinError('PIN salah. Coba lagi.'); setPin(''); return; }
+    setDeleting(true);
+    startTransition(async () => {
+      try {
+        await deletePeserta(peserta.id);
+        setDeleted(true);
+        setTimeout(() => onClose(), 900);
+      } catch (e: unknown) {
+        setPinError(e instanceof Error ? e.message : 'Gagal menghapus');
+        setDeleting(false);
+      }
+    });
+  }
 
   const [form, setForm] = useState({
     status_badge:      peserta.status_badge ?? 'PENDING',
@@ -252,6 +282,20 @@ function EditModal({ peserta, onClose }: { peserta: Peserta; onClose: () => void
 
           {/* Footer */}
           <div className="flex gap-2 pt-1">
+            {/* Hapus */}
+            <button
+              type="button"
+              onClick={openPinPrompt}
+              disabled={isPending}
+              className="flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-semibold text-red-500 hover:bg-red-100 hover:text-red-700 transition-colors disabled:opacity-50"
+              title="Hapus peserta"
+            >
+              <svg viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5">
+                <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
+              </svg>
+              Hapus
+            </button>
+
             <button
               type="button"
               onClick={onClose}
@@ -264,9 +308,7 @@ function EditModal({ peserta, onClose }: { peserta: Peserta; onClose: () => void
               type="submit"
               disabled={isPending || success}
               className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
-                success
-                  ? 'bg-emerald-500 text-white'
-                  : 'btn-primary'
+                success ? 'bg-emerald-500 text-white' : 'btn-primary'
               }`}
             >
               {success ? (
@@ -290,6 +332,77 @@ function EditModal({ peserta, onClose }: { peserta: Peserta; onClose: () => void
             </button>
           </div>
         </form>
+
+        {/* ── PIN Overlay ── */}
+        {showPinPrompt && (
+          <div className="absolute inset-0 flex items-center justify-center rounded-2xl bg-white/95 backdrop-blur-sm z-10">
+            <div className="w-full max-w-xs px-8 text-center">
+              {deleted ? (
+                <div className="space-y-2">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                    <svg viewBox="0 0 20 20" fill="currentColor" className="h-6 w-6 text-red-500">
+                      <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <p className="text-sm font-semibold text-slate-700">Data dihapus.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
+                    <svg viewBox="0 0 20 20" fill="currentColor" className="h-6 w-6 text-red-500">
+                      <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495ZM10 5a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 10 5Zm0 9a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <p className="mb-1 text-sm font-bold text-slate-800">Hapus <span className="text-red-600">{peserta.nama}</span>?</p>
+                  <p className="mb-4 text-xs text-slate-400">Masukkan PIN admin untuk konfirmasi.</p>
+
+                  <input
+                    ref={pinRef}
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={pin}
+                    onChange={(e) => { setPin(e.target.value); setPinError(''); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleDelete(); if (e.key === 'Escape') setShowPinPrompt(false); }}
+                    placeholder="● ● ● ● ● ●"
+                    className="input w-full text-center text-lg tracking-[0.4em] font-mono mb-2"
+                  />
+
+                  {pinError && <p className="mb-3 text-xs text-red-500">{pinError}</p>}
+
+                  <div className="flex gap-2 mt-3">
+                    <button
+                      type="button"
+                      onClick={() => { setShowPinPrompt(false); setPin(''); setPinError(''); }}
+                      className="btn-secondary flex-1 text-sm"
+                      disabled={deleting}
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDelete}
+                      disabled={pin.length < 6 || deleting}
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+                    >
+                      {deleting ? (
+                        <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                      ) : (
+                        <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                          <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                      {deleting ? 'Menghapus...' : 'Hapus'}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
