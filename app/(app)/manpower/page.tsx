@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { TopBar } from "@/components/TopBar";
 import { StatusBadge } from "@/components/StatusBadge";
+import { EditPesertaButton } from "@/components/EditPesertaModal";
 import { DEPARTEMEN } from "@/lib/constants";
 import Link from "next/link";
 
@@ -171,6 +172,7 @@ export default async function ManpowerPage({
                     ))}
                     <th className="px-4 py-3 text-center whitespace-nowrap">DOK</th>
                     <th className="px-4 py-3 whitespace-nowrap">REMARKS</th>
+                    <th className="px-4 py-3 text-center whitespace-nowrap"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -220,6 +222,23 @@ export default async function ManpowerPage({
                         </td>
                         <td className="px-4 py-2.5 text-slate-400 text-xs max-w-[200px]">
                           <span className="line-clamp-1">{(p.remarks as string | null) ?? ""}</span>
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <EditPesertaButton peserta={{
+                            id:                p.id as number,
+                            nama:              p.nama as string,
+                            no_badge:          p.no_badge as string | null,
+                            no_erp:            p.no_erp as string | null,
+                            status_badge:      p.status_badge as string | null,
+                            jabatan_deskripsi: p.jabatan_deskripsi as string | null,
+                            leader:            p.leader as string | null,
+                            tanggal_induction: p.tanggal_induction as string | null,
+                            due_date:          p.due_date as string | null,
+                            ktp:               p.ktp as boolean,
+                            sks:               p.sks as boolean,
+                            sertifikat:        p.sertifikat as boolean,
+                            remarks:           p.remarks as string | null,
+                          }} />
                         </td>
                       </tr>
                     ))
