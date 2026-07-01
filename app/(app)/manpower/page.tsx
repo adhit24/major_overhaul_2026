@@ -41,7 +41,7 @@ function SortIcon({ active, asc }: { active: boolean; asc: boolean }) {
 export default async function ManpowerPage({
   searchParams,
 }: {
-  searchParams: Promise<{ dept?: string; sort?: string; dir?: string; view?: string }>;
+  searchParams: Promise<{ dept?: string; sort?: string; dir?: string; view?: string; psort?: string; pdir?: string }>;
 }) {
   const { dept, sort: sortParam, dir: dirParam, view } = await searchParams;
   const showPerluTindak = view === "perlu-tindak";
@@ -72,15 +72,31 @@ export default async function ManpowerPage({
 
   const totalAll = allPeserta.length;
 
+  // Sort untuk tabel Perlu Tindak (pakai psort/pdir agar terpisah dari sort dept)
+  const PT_SORTABLE: Record<string, string> = {
+    no_badge: "NO BADGE", nama: "NAMA", status_badge: "STATUS", departemen: "DIVISI",
+    jabatan_deskripsi: "JABATAN", leader: "LEADER", tanggal_induction: "TGL INDUCTION",
+  };
+  const ptSortParam = (await searchParams).psort as string | undefined;
+  const ptDirParam  = (await searchParams).pdir as string | undefined;
+  const ptSortCol   = ptSortParam && PT_SORTABLE[ptSortParam] ? ptSortParam : "status_badge";
+  const ptSortAsc   = ptDirParam !== "desc";
+
   // Query semua Pending + Returned (lintas divisi)
   let perluTindakWorkers: Record<string, unknown>[] | null = null;
   if (showPerluTindak) {
     const cols = "id, no_badge, nama, departemen, kategori, no_erp, job_no, jabatan_deskripsi, leader, tanggal_induction, due_date, status_badge, ktp, sks, sertifikat, remarks";
+    const ptOrder = { ascending: ptSortAsc, nullsFirst: false };
     const [pt1, pt2] = await Promise.all([
-      supabase.from("peserta").select(cols).in("status_badge", ["PENDING", "RETURNED"]).order("status_badge").order("departemen").range(0, 999),
-      supabase.from("peserta").select(cols).in("status_badge", ["PENDING", "RETURNED"]).order("status_badge").order("departemen").range(1000, 1999),
+      supabase.from("peserta").select(cols).in("status_badge", ["PENDING", "RETURNED"]).order(ptSortCol, ptOrder).range(0, 999),
+      supabase.from("peserta").select(cols).in("status_badge", ["PENDING", "RETURNED"]).order(ptSortCol, ptOrder).range(1000, 1999),
     ]);
     perluTindakWorkers = [...(pt1.data ?? []), ...(pt2.data ?? [])];
+  }
+
+  function ptSortUrl(col: string) {
+    const newDir = col === ptSortCol && ptSortAsc ? "desc" : "asc";
+    return `/manpower?view=perlu-tindak&psort=${col}&pdir=${newDir}`;
   }
 
   // Query detail worker dengan sort & pagination
@@ -163,16 +179,30 @@ export default async function ManpowerPage({
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
                 <thead>
-                  <tr className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                    <th className="px-5 py-3">No Badge</th>
-                    <th className="px-4 py-3">Nama</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Divisi</th>
-                    <th className="px-4 py-3">Jabatan</th>
-                    <th className="px-4 py-3">Leader</th>
-                    <th className="px-4 py-3">Tgl Induction</th>
-                    <th className="px-4 py-3 text-center">Dok</th>
-                    <th className="px-4 py-3">Remarks</th>
+                  <tr className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none">
+                    {([
+                      ["no_badge",          "px-5 py-3", "No Badge"],
+                      ["nama",              "px-4 py-3", "Nama"],
+                      ["status_badge",      "px-4 py-3", "Status"],
+                      ["departemen",        "px-4 py-3", "Divisi"],
+                      ["jabatan_deskripsi", "px-4 py-3", "Jabatan"],
+                      ["leader",            "px-4 py-3", "Leader"],
+                      ["tanggal_induction", "px-4 py-3", "Tgl Induction"],
+                    ] as const).map(([col, cls, label]) => (
+                      <th key={col} className={`whitespace-nowrap ${cls}`}>
+                        <Link
+                          href={ptSortUrl(col)}
+                          className="inline-flex items-center hover:text-slate-700 transition-colors cursor-pointer"
+                        >
+                          {label}
+                          {ptSortCol === col
+                            ? <span className="ml-1 text-brand-500 text-[10px]">{ptSortAsc ? "↑" : "↓"}</span>
+                            : <span className="ml-1 text-slate-300 text-[10px]">↕</span>}
+                        </Link>
+                      </th>
+                    ))}
+                    <th className="px-4 py-3 text-center whitespace-nowrap">Dok</th>
+                    <th className="px-4 py-3 whitespace-nowrap">Remarks</th>
                     <th className="px-3 py-3"></th>
                   </tr>
                 </thead>
