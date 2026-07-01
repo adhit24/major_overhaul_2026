@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { TopBar } from "@/components/TopBar";
 import { StatusBadge } from "@/components/StatusBadge";
+import { EditPesertaButton } from "@/components/EditPesertaModal";
 import { DEPARTEMEN, STATUS_BADGE } from "@/lib/constants";
 import { SubmitButton } from "@/components/SubmitButton";
 
@@ -18,7 +19,7 @@ export default async function PesertaPage({
 
   let query = supabase
     .from("peserta")
-    .select("id, nama, no_badge, no_erp, departemen, kategori, leader, status_badge, tanggal_induction, due_date")
+    .select("id, nama, no_badge, no_erp, departemen, kategori, leader, status_badge, tanggal_induction, due_date, jabatan_deskripsi, ktp, sks, sertifikat, remarks")
     .order("tanggal_induction", { ascending: false })
     .limit(100);
 
@@ -104,6 +105,7 @@ export default async function PesertaPage({
                   <th className="py-2 pr-4">Leader</th>
                   <th className="py-2 pr-4">Status</th>
                   <th className="py-2 pr-4">Tgl Induction</th>
+                  <th className="py-2"></th>
                 </tr>
               </thead>
               <tbody>
@@ -121,11 +123,28 @@ export default async function PesertaPage({
                       <StatusBadge status={p.status_badge} />
                     </td>
                     <td className="py-2 pr-4 text-slate-600">{p.tanggal_induction ?? "-"}</td>
+                    <td className="py-2">
+                      <EditPesertaButton peserta={{
+                        id:                p.id,
+                        nama:              p.nama,
+                        no_badge:          p.no_badge ?? null,
+                        no_erp:            p.no_erp ?? null,
+                        status_badge:      p.status_badge ?? null,
+                        jabatan_deskripsi: p.jabatan_deskripsi ?? null,
+                        leader:            p.leader ?? null,
+                        tanggal_induction: p.tanggal_induction ?? null,
+                        due_date:          p.due_date ?? null,
+                        ktp:               p.ktp ?? false,
+                        sks:               p.sks ?? false,
+                        sertifikat:        p.sertifikat ?? false,
+                        remarks:           p.remarks ?? null,
+                      }} />
+                    </td>
                   </tr>
                 ))}
                 {!peserta?.length ? (
                   <tr>
-                    <td colSpan={8} className="py-6 text-center text-slate-400">
+                    <td colSpan={9} className="py-6 text-center text-slate-400">
                       {error ? error.message : "Tidak ada data yang cocok dengan filter."}
                     </td>
                   </tr>
