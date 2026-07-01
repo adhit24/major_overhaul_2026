@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { TopBar } from "@/components/TopBar";
 import { StatusBadge } from "@/components/StatusBadge";
 import { EditPesertaButton } from "@/components/EditPesertaModal";
+import { ManpowerCards } from "@/components/ManpowerCards";
 import { DEPARTEMEN } from "@/lib/constants";
 import Link from "next/link";
 
@@ -90,52 +91,46 @@ export default async function ManpowerPage({
     return `/manpower?dept=${encodeURIComponent(dept ?? "")}&sort=${col}&dir=${newDir}`;
   }
 
+  const totalPending  = deptStats.reduce((s, d) => s + d.pending,  0);
+  const totalReturned = deptStats.reduce((s, d) => s + d.returned, 0);
+  const totalActive   = deptStats.reduce((s, d) => s + d.active,   0);
+
   return (
     <>
       <TopBar title="Manpower per Divisi" email={userData.user?.email} />
-      <main className="flex-1 space-y-6 p-4 sm:p-6">
+      <main className="flex-1 p-4 sm:p-6 space-y-5">
 
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-slate-500">
-            Total seluruh divisi:{" "}
-            <span className="font-semibold text-slate-800">{totalAll} orang</span>
-          </p>
+        {/* ── Stat strip ── */}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 rounded-xl bg-white border border-slate-200 px-4 py-2 shadow-sm">
+            <span className="h-2 w-2 rounded-full bg-slate-400" />
+            <span className="text-xs text-slate-500">Total</span>
+            <span className="text-sm font-bold text-slate-800">{totalAll}</span>
+          </div>
+          <div className="flex items-center gap-2 rounded-xl bg-white border border-slate-200 px-4 py-2 shadow-sm">
+            <span className="h-2 w-2 rounded-full bg-emerald-400" />
+            <span className="text-xs text-slate-500">Active</span>
+            <span className="text-sm font-bold text-emerald-700">{totalActive}</span>
+          </div>
+          <div className="flex items-center gap-2 rounded-xl bg-amber-50 border border-amber-200 px-4 py-2 shadow-sm">
+            <span className="h-2 w-2 rounded-full bg-amber-400" />
+            <span className="text-xs text-amber-600">Pending</span>
+            <span className="text-sm font-bold text-amber-700">{totalPending}</span>
+          </div>
+          <div className="flex items-center gap-2 rounded-xl bg-rose-50 border border-rose-200 px-4 py-2 shadow-sm">
+            <span className="h-2 w-2 rounded-full bg-rose-400" />
+            <span className="text-xs text-rose-500">Returned</span>
+            <span className="text-sm font-bold text-rose-600">{totalReturned}</span>
+          </div>
           {dept && (
-            <Link href="/manpower" className="text-xs text-slate-400 hover:text-slate-700 transition-colors">
+            <Link href="/manpower" className="ml-auto text-xs text-slate-400 hover:text-slate-700 transition-colors">
               ← Semua divisi
             </Link>
           )}
         </div>
 
-        {/* Dept cards */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {deptStats.map(({ dept: d, total, active, pending, returned }) => {
-            const style = DEPT_STYLE[d] ?? DEPT_STYLE["SUPPORTING"];
-            const isSelected = dept === d;
-            return (
-              <Link
-                key={d}
-                href={`/manpower?dept=${encodeURIComponent(d)}`}
-                className={`rounded-xl border-2 p-4 transition-all shadow-sm ${style.card} ${
-                  isSelected ? "ring-2 ring-offset-1 ring-brand-500 shadow-md" : ""
-                }`}
-              >
-                <div className="flex items-center gap-1.5 mb-2">
-                  <span className={`h-2 w-2 rounded-full ${style.dot}`} />
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-600 truncate">{d}</p>
-                </div>
-                <p className="text-3xl font-bold text-slate-800 sm:text-4xl">{total}</p>
-                <p className="mt-1 text-[11px] text-slate-500">orang</p>
-                <div className="mt-3 space-y-0.5">
-                  <p className="text-[10px] text-emerald-600">● ACTIVE: {active}</p>
-                  <p className="text-[10px] text-amber-600">● PENDING: {pending}</p>
-                  {returned > 0 && <p className="text-[10px] text-slate-400">● RETURNED: {returned}</p>}
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+        {/* ── Animated dept + pending/return cards ── */}
+        <ManpowerCards deptStats={deptStats} selectedDept={dept} />
 
         {/* Detail tabel */}
         {dept && workers !== null && (
