@@ -41,9 +41,10 @@ function SortIcon({ active, asc }: { active: boolean; asc: boolean }) {
 export default async function ManpowerPage({
   searchParams,
 }: {
-  searchParams: Promise<{ dept?: string; sort?: string; dir?: string }>;
+  searchParams: Promise<{ dept?: string; sort?: string; dir?: string; view?: string }>;
 }) {
-  const { dept, sort: sortParam, dir: dirParam } = await searchParams;
+  const { dept, sort: sortParam, dir: dirParam, view } = await searchParams;
+  const showPerluTindak = view === "perlu-tindak";
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
 
@@ -70,6 +71,17 @@ export default async function ManpowerPage({
   });
 
   const totalAll = allPeserta.length;
+
+  // Query semua Pending + Returned (lintas divisi)
+  let perluTindakWorkers: Record<string, unknown>[] | null = null;
+  if (showPerluTindak) {
+    const cols = "id, no_badge, nama, departemen, kategori, no_erp, job_no, jabatan_deskripsi, leader, tanggal_induction, due_date, status_badge, ktp, sks, sertifikat, remarks";
+    const [pt1, pt2] = await Promise.all([
+      supabase.from("peserta").select(cols).in("status_badge", ["PENDING", "RETURNED"]).order("status_badge").order("departemen").range(0, 999),
+      supabase.from("peserta").select(cols).in("status_badge", ["PENDING", "RETURNED"]).order("status_badge").order("departemen").range(1000, 1999),
+    ]);
+    perluTindakWorkers = [...(pt1.data ?? []), ...(pt2.data ?? [])];
+  }
 
   // Query detail worker dengan sort & pagination
   let workers: Record<string, unknown>[] | null = null;
@@ -131,6 +143,98 @@ export default async function ManpowerPage({
 
         {/* ── Animated dept + pending/return cards ── */}
         <ManpowerCards deptStats={deptStats} selectedDept={dept} />
+
+        {/* ── Tabel Perlu Tindak ── */}
+        {showPerluTindak && perluTindakWorkers !== null && (
+          <div className="card p-0 overflow-hidden">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-60" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-500" />
+                </span>
+                <span className="text-sm font-bold text-slate-700">Perlu Tindak Lanjut</span>
+                <span className="text-xs text-slate-400">— {perluTindakWorkers.length} orang (Pending + Returned)</span>
+              </div>
+              <Link href="/manpower" className="text-xs text-slate-400 hover:text-slate-700">
+                Tutup ×
+              </Link>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead>
+                  <tr className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    <th className="px-5 py-3">No Badge</th>
+                    <th className="px-4 py-3">Nama</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Divisi</th>
+                    <th className="px-4 py-3">Jabatan</th>
+                    <th className="px-4 py-3">Leader</th>
+                    <th className="px-4 py-3">Tgl Induction</th>
+                    <th className="px-4 py-3 text-center">Dok</th>
+                    <th className="px-4 py-3">Remarks</th>
+                    <th className="px-3 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {perluTindakWorkers.map((p, i) => (
+                    <tr key={p.id as string} className={`transition-colors hover:bg-amber-50/30 ${i % 2 === 0 ? "bg-white" : "bg-slate-50/30"}`}>
+                      <td className="px-5 py-2.5 font-mono font-semibold text-slate-700 whitespace-nowrap">
+                        {(p.no_badge as string | null) ?? <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-4 py-2.5 font-medium text-slate-800 whitespace-nowrap">{p.nama as string}</td>
+                      <td className="px-4 py-2.5">
+                        <StatusBadge status={(p.status_badge as string | null) ?? "PENDING"} />
+                      </td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        <span className="text-xs font-semibold text-slate-500">{(p.departemen as string | null) ?? "—"}</span>
+                      </td>
+                      <td className="px-4 py-2.5 text-slate-500 max-w-[140px]">
+                        <span className="line-clamp-1">{(p.jabatan_deskripsi as string | null) ?? <span className="text-slate-300">—</span>}</span>
+                      </td>
+                      <td className="px-4 py-2.5 text-slate-500 whitespace-nowrap">{(p.leader as string | null) ?? "—"}</td>
+                      <td className="px-4 py-2.5 text-slate-500 whitespace-nowrap">{(p.tanggal_induction as string | null) ?? "—"}</td>
+                      <td className="px-4 py-2.5 text-center">
+                        <span className="flex items-center justify-center gap-1">
+                          {p.ktp        ? <span className="text-[10px] rounded bg-emerald-100 text-emerald-700 px-1 py-0.5 font-semibold">KTP</span>  : null}
+                          {p.sks        ? <span className="text-[10px] rounded bg-blue-100   text-blue-700   px-1 py-0.5 font-semibold">SKS</span>  : null}
+                          {p.sertifikat ? <span className="text-[10px] rounded bg-violet-100 text-violet-700 px-1 py-0.5 font-semibold">SERT</span> : null}
+                          {!p.ktp && !p.sks && !p.sertifikat ? <span className="text-slate-300 text-xs">—</span> : null}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 text-slate-400 text-xs max-w-[160px]">
+                        <span className="line-clamp-1">{(p.remarks as string | null) ?? ""}</span>
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        <EditPesertaButton peserta={{
+                          id:                p.id as number,
+                          nama:              p.nama as string,
+                          no_badge:          p.no_badge as string | null,
+                          no_erp:            p.no_erp as string | null,
+                          status_badge:      p.status_badge as string | null,
+                          jabatan_deskripsi: p.jabatan_deskripsi as string | null,
+                          leader:            p.leader as string | null,
+                          tanggal_induction: p.tanggal_induction as string | null,
+                          due_date:          p.due_date as string | null,
+                          ktp:               p.ktp as boolean,
+                          sks:               p.sks as boolean,
+                          sertifikat:        p.sertifikat as boolean,
+                          remarks:           p.remarks as string | null,
+                        }} />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="border-t border-slate-100 bg-amber-50/40 px-5 py-3 text-xs text-slate-500">
+              <span className="text-amber-600 font-semibold">{perluTindakWorkers.filter(p => p.status_badge === "PENDING").length} Pending</span>
+              {" · "}
+              <span className="text-rose-500 font-semibold">{perluTindakWorkers.filter(p => p.status_badge === "RETURNED").length} Returned</span>
+              {" · klik ✏️ untuk update status"}
+            </div>
+          </div>
+        )}
 
         {/* Detail tabel */}
         {dept && workers !== null && (

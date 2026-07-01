@@ -98,7 +98,12 @@ export function ManpowerCards({
 
       {/* ── Pending / Return Card ── */}
       <motion.div variants={cardVariants}>
-        <div className="flex h-full flex-col rounded-2xl border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-rose-50/60 p-4 shadow-sm">
+        <Link
+          href="/manpower?view=perlu-tindak"
+          className={`group flex h-full flex-col rounded-2xl border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-rose-50/60 p-4 shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${
+            selectedDept === undefined ? '' : ''
+          }`}
+        >
           {/* Label */}
           <div className="flex items-center gap-1.5 mb-3">
             <span className="relative flex h-2.5 w-2.5">
@@ -137,7 +142,15 @@ export function ManpowerCards({
               </div>
             ))}
           </div>
-        </div>
+
+          {/* CTA hint */}
+          <div className="mt-auto pt-3 flex items-center gap-1 text-[10px] font-semibold text-amber-500 group-hover:text-amber-700 transition-colors">
+            <svg viewBox="0 0 16 16" fill="currentColor" className="h-3 w-3">
+              <path fillRule="evenodd" d="M6.22 4.22a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06l-3.25 3.25a.75.75 0 0 1-1.06-1.06L9 8 6.22 5.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+            </svg>
+            Lihat & edit semua
+          </div>
+        </Link>
       </motion.div>
     </motion.div>
   );
