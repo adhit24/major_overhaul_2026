@@ -54,8 +54,8 @@ export default async function ManpowerPage({
 
   // Pagination: Supabase cap 1000 baris/request, ambil dua batch parallel
   const [batch1, batch2] = await Promise.all([
-    supabase.from("peserta").select("id, departemen, status_badge").range(0, 999),
-    supabase.from("peserta").select("id, departemen, status_badge").range(1000, 1999),
+    supabase.from("peserta").select("id, departemen, status_badge, no_erp, kategori").range(0, 999),
+    supabase.from("peserta").select("id, departemen, status_badge, no_erp, kategori").range(1000, 1999),
   ]);
   const allPeserta = [...(batch1.data ?? []), ...(batch2.data ?? [])];
 
@@ -71,6 +71,32 @@ export default async function ManpowerPage({
   });
 
   const totalAll = allPeserta.length;
+
+  // Rekap Section HRD (mengikuti MP List HRD): section ditentukan dari awalan PIN/No ERP.
+  // 1xxxx = INDIRECT (HO), 2xxxx = INDIRECT (Local), 3xxxx = DIRECT, 4xxxx = Operator & Driver.
+  // KARYAWAN tanpa PIN = EXPAT / belum terpetakan. Non-KARYAWAN tidak dihitung (subcont dsb).
+  const hrdKaryawan = allPeserta.filter((p) => p.kategori === "KARYAWAN");
+  const sectionOf = (erp: string | null) => {
+    const s = String(erp ?? "");
+    if (s.startsWith("1")) return "B";
+    if (s.startsWith("2")) return "C";
+    if (s.startsWith("3")) return "D";
+    if (s.startsWith("4")) return "E";
+    return "A";
+  };
+  const SECTION_LABELS: [string, string][] = [
+    ["A", "EXPAT / Tanpa PIN"],
+    ["B", "INDIRECT (HO)"],
+    ["C", "INDIRECT (Local)"],
+    ["D", "DIRECT"],
+    ["E", "Operator & Driver"],
+  ];
+  const sectionStats = SECTION_LABELS.map(([code, label]) => ({
+    code,
+    label,
+    total: hrdKaryawan.filter((p) => sectionOf(p.no_erp as string | null) === code).length,
+  }));
+  const totalKaryawan = hrdKaryawan.length;
 
   // Sort untuk tabel Perlu Tindak (pakai psort/pdir agar terpisah dari sort dept)
   const PT_SORTABLE: Record<string, string> = {
@@ -159,6 +185,38 @@ export default async function ManpowerPage({
 
         {/* ── Animated dept + pending/return cards ── */}
         <ManpowerCards deptStats={deptStats} selectedDept={dept} />
+
+        {/* ── Rekap Section HRD (sinkron MP List HRD) ── */}
+        <div className="card p-0 overflow-hidden">
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3">
+            <span className="text-sm font-bold text-slate-700">Manpower per Section (HRD)</span>
+            <span className="text-xs text-slate-400">kategori KARYAWAN, section dari awalan PIN</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead>
+                <tr className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                  <th className="px-5 py-2.5">Section</th>
+                  <th className="px-4 py-2.5 text-right">Jumlah</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sectionStats.map((s) => (
+                  <tr key={s.code} className="border-b border-slate-50">
+                    <td className="px-5 py-2.5 text-slate-700">
+                      {s.code} – {s.label}
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-semibold text-slate-800">{s.total}</td>
+                  </tr>
+                ))}
+                <tr className="bg-slate-50">
+                  <td className="px-5 py-2.5 font-bold text-slate-800">Total</td>
+                  <td className="px-4 py-2.5 text-right font-bold text-slate-900">{totalKaryawan}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
 
         {/* ── Tabel Perlu Tindak ── */}
         {showPerluTindak && perluTindakWorkers !== null && (
