@@ -14,8 +14,12 @@ export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
 
-  const [totalBadge, totalPending, totalPerluVerifikasi, deposits, recentPeserta] = await Promise.all([
-    supabase.from("peserta").select("*", { count: "exact", head: true }).not("no_badge", "is", null),
+  const [totalBadgeTervalidasi, totalPending, totalPerluVerifikasi, deposits, recentPeserta] = await Promise.all([
+    supabase
+      .from("peserta")
+      .select("*", { count: "exact", head: true })
+      .eq("tervalidasi_induction", true)
+      .not("no_badge", "is", null),
     supabase.from("peserta").select("*", { count: "exact", head: true }).eq("status_badge", "PENDING"),
     supabase.from("peserta").select("*", { count: "exact", head: true }).is("departemen", null),
     supabase.from("deposit_batch").select("jumlah_kartu, total_deposit, status_batch"),
@@ -25,6 +29,12 @@ export default async function DashboardPage() {
       .order("created_at", { ascending: false })
       .limit(8),
   ]);
+
+  // "Sudah Ada Badge" dihitung dari baris yang tervalidasi_induction = true, yaitu baris
+  // yang sudah dicocokkan 1:1 ke master HRD (SUMMARY_INDUCTION&APD.xlsx, sheet INDUCTION).
+  // Bukan COUNT(*) polos (kena duplikat entri lama) atau COUNT(DISTINCT no_badge) (meremehkan
+  // badge yang sengaja dipakai ulang untuk orang berbeda dari waktu ke waktu).
+  const totalBadgeValid = totalBadgeTervalidasi.count ?? 0;
 
   const allBatches   = deposits.data ?? [];
   const doneBatches  = allBatches.filter((b) => b.status_batch === "DONE");
@@ -37,7 +47,7 @@ export default async function DashboardPage() {
       <main className="flex-1 space-y-6 p-4 sm:p-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <StatCard label="Total Kartu Diajukan" value={totalKartu} hint="batch DONE" />
-          <StatCard label="Sudah Ada Badge" value={totalBadge.count ?? 0} tone="success" />
+          <StatCard label="Sudah Ada Badge" value={totalBadgeValid} tone="success" />
           <StatCard
             label="Belum Ada Badge (PENDING)"
             value={totalPending.count ?? 0}
