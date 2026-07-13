@@ -14,7 +14,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden w-60 flex-col border-r border-slate-200 bg-white px-4 py-6 sm:flex">
+    <aside className="hidden w-60 flex-col border-r border-slate-200 bg-white px-4 py-6 sm:flex print:hidden">
       <div className="mb-8 px-2">
         <img src="/logo_koin.png" alt="PT KOIN" className="h-10 w-auto object-contain" />
       </div>
