@@ -29,7 +29,7 @@ export function StatCard({
   const content = (
     <>
       <p className="text-sm font-medium text-slate-500">{label}</p>
-      <p className={`mt-2 text-2xl font-semibold tabular-nums ${toneClasses[tone]}`}>{value}</p>
+      <p className={`mt-2 break-words text-xl font-semibold leading-tight tabular-nums sm:text-2xl ${toneClasses[tone]}`}>{value}</p>
       {hint ? <p className="mt-1 text-xs text-slate-400">{hint}</p> : null}
     </>
   );
