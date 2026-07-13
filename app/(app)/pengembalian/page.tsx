@@ -29,7 +29,7 @@ export default async function PengembalianPage({
   // Supabase/PostgREST membatasi maksimum 1000 baris per request walau range()
   // diminta lebih besar - semua query yang populasinya bisa >1000 dipecah 2 batch.
   const cols = "id, no_badge, no_erp, nama, departemen, status_badge";
-  const [p1, p2, g1, g2, tarifRes, rugiRes] = await Promise.all([
+  const [p1, p2, g1, g2, tarifRes, rugiRes, kartuRes] = await Promise.all([
     supabase.from("peserta").select(cols).eq("tervalidasi_induction", true).in("status_badge", ["ACTIVE", "RETURNED", "HANGUS"]).order("nama").range(0, 999),
     supabase.from("peserta").select(cols).eq("tervalidasi_induction", true).in("status_badge", ["ACTIVE", "RETURNED", "HANGUS"]).order("nama").range(1000, 1999),
     supabase.from("pengembalian").select("id, peserta_id, tanggal, pengembalian_detail(item, kondisi, potongan)").range(0, 999),
@@ -40,6 +40,11 @@ export default async function PengembalianPage({
       .select("item, kondisi, potongan, pengembalian(id, tanggal, petugas, peserta(id, nama, no_badge, departemen))")
       .neq("kondisi", "KEMBALI")
       .order("potongan", { ascending: false }),
+    supabase
+      .from("pengembalian_detail")
+      .select("kondisi, potongan, pengembalian(id, tanggal, petugas, is_migrasi, peserta(id, nama, no_badge, no_erp, departemen, jabatan_deskripsi))")
+      .eq("item", "KARTU")
+      .neq("kondisi", "HILANG"),
   ]);
   const peserta = [...(p1.data ?? []), ...(p2.data ?? [])];
   const kejadian = [...(g1.data ?? []), ...(g2.data ?? [])];
@@ -52,6 +57,16 @@ export default async function PengembalianPage({
       peserta: { id: number; nama: string; no_badge: string | null; departemen: string | null } | null } | null;
   };
   const rugiRows = (rugiRes.data ?? []) as unknown as RugiRow[];
+
+  type KartuRow = {
+    kondisi: string; potongan: number;
+    pengembalian: { id: number; tanggal: string; petugas: string | null; is_migrasi: boolean;
+      peserta: { id: number; nama: string; no_badge: string | null; no_erp: string | null;
+        departemen: string | null; jabatan_deskripsi: string | null } | null } | null;
+  };
+  const kartuRows = ((kartuRes.data ?? []) as unknown as KartuRow[])
+    .slice()
+    .sort((a, b) => (b.pengembalian?.tanggal ?? "").localeCompare(a.pengembalian?.tanggal ?? ""));
 
   // agregasi per peserta
   const itemsByPeserta = new Map<number, string[]>();
@@ -89,14 +104,64 @@ export default async function PengembalianPage({
     <>
       <TopBar title="Pengembalian ID Card & APD" email={userData.user?.email} />
       <main className="flex-1 space-y-5 p-4 sm:p-6">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           <div className="card"><p className="text-xs text-slate-500">Lengkap</p><p className="text-xl font-bold text-emerald-600">{nLengkap}</p></div>
           <div className="card"><p className="text-xs text-slate-500">Kurang</p><p className="text-xl font-bold text-amber-600">{nKurang}</p></div>
           <div className="card"><p className="text-xs text-slate-500">Belum Kembali</p><p className="text-xl font-bold text-slate-700">{nBelum}</p></div>
+          <a href="#daftar-kembali" className="card block hover:ring-1 hover:ring-emerald-200"><p className="text-xs text-slate-500">ID Card Dikembalikan</p><p className="text-xl font-bold text-emerald-600">{kartuRows.length}</p></a>
           <a href="#daftar-kehilangan" className="card block hover:ring-1 hover:ring-red-200"><p className="text-xs text-slate-500">Total Potongan</p><p className="text-xl font-bold text-red-600">{formatRupiah(totalPotongan)}</p></a>
         </div>
 
         <TarifCard tarif={tarif} />
+
+        {kartuRows.length > 0 && (
+          <div id="daftar-kembali" className="card p-0 overflow-hidden scroll-mt-4">
+            <div className="px-5 py-4 border-b border-slate-100">
+              <h2 className="text-sm font-semibold text-slate-800">Daftar ID Card Dikembalikan</h2>
+              <p className="text-xs text-slate-400 mt-0.5">{kartuRows.length} kartu sudah dikembalikan</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    <th className="px-5 py-3">No Badge</th>
+                    <th className="px-4 py-3">Nama</th>
+                    <th className="px-4 py-3">PIN</th>
+                    <th className="px-4 py-3">Divisi</th>
+                    <th className="px-4 py-3">Jabatan</th>
+                    <th className="px-4 py-3">Kondisi</th>
+                    <th className="px-4 py-3">Tanggal Kembali</th>
+                    <th className="px-4 py-3">Petugas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {kartuRows.map((r, i) => {
+                    const p = r.pengembalian?.peserta;
+                    return (
+                      <tr key={`${r.pengembalian?.id}-${i}`} className="border-b border-slate-50">
+                        <td className="px-5 py-2.5">{p?.no_badge ?? "-"}</td>
+                        <td className="px-4 py-2.5 font-medium text-slate-800">
+                          {p ? <Link href={`/pengembalian/${p.id}`} className="hover:text-brand-600 hover:underline">{p.nama}</Link> : "-"}
+                        </td>
+                        <td className="px-4 py-2.5 text-slate-500">{p?.no_erp ?? "-"}</td>
+                        <td className="px-4 py-2.5 text-slate-600">{p?.departemen ?? "-"}</td>
+                        <td className="px-4 py-2.5 text-slate-600">{p?.jabatan_deskripsi ?? "-"}</td>
+                        <td className="px-4 py-2.5">
+                          <span className={`badge-pill ${r.kondisi === "RUSAK" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>{r.kondisi}</span>
+                        </td>
+                        <td className="px-4 py-2.5 text-slate-500">
+                          {r.pengembalian?.tanggal ?? "-"}
+                          {r.pengembalian?.is_migrasi && <span className="ml-2 badge-pill bg-slate-100 text-slate-500">migrasi</span>}
+                        </td>
+                        <td className="px-4 py-2.5 text-slate-500">{r.pengembalian?.petugas ?? "-"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {rugiRows.length > 0 && (
           <div id="daftar-kehilangan" className="card p-0 overflow-hidden scroll-mt-4">
