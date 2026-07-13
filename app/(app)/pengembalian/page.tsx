@@ -26,15 +26,18 @@ export default async function PengembalianPage({
 
   // Populasi dibatasi ke peserta tervalidasi_induction=true agar konsisten dengan
   // kartu "Sudah Ada Badge" di Dashboard (baris yang sudah dicocokkan 1:1 ke master HRD).
+  // Supabase/PostgREST membatasi maksimum 1000 baris per request walau range()
+  // diminta lebih besar - semua query yang populasinya bisa >1000 dipecah 2 batch.
   const cols = "id, no_badge, no_erp, nama, departemen, status_badge";
-  const [p1, p2, gRes, tarifRes] = await Promise.all([
+  const [p1, p2, g1, g2, tarifRes] = await Promise.all([
     supabase.from("peserta").select(cols).eq("tervalidasi_induction", true).in("status_badge", ["ACTIVE", "RETURNED", "HANGUS"]).order("nama").range(0, 999),
     supabase.from("peserta").select(cols).eq("tervalidasi_induction", true).in("status_badge", ["ACTIVE", "RETURNED", "HANGUS"]).order("nama").range(1000, 1999),
-    supabase.from("pengembalian").select("id, peserta_id, tanggal, pengembalian_detail(item, kondisi, potongan)").range(0, 1999),
+    supabase.from("pengembalian").select("id, peserta_id, tanggal, pengembalian_detail(item, kondisi, potongan)").range(0, 999),
+    supabase.from("pengembalian").select("id, peserta_id, tanggal, pengembalian_detail(item, kondisi, potongan)").range(1000, 1999),
     supabase.from("tarif_potongan").select("item, tarif_hilang"),
   ]);
   const peserta = [...(p1.data ?? []), ...(p2.data ?? [])];
-  const kejadian = gRes.data ?? [];
+  const kejadian = [...(g1.data ?? []), ...(g2.data ?? [])];
   const tarif: Record<string, number> = {};
   for (const t of tarifRes.data ?? []) tarif[t.item] = Number(t.tarif_hilang);
 

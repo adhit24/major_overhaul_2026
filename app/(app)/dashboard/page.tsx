@@ -15,7 +15,14 @@ export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
 
-  const [totalBadgeTervalidasi, totalPending, totalPerluVerifikasi, deposits, recentPeserta, pengembalianRes, totalWajibKembali] = await Promise.all([
+  // Supabase/PostgREST membatasi maksimum 1000 baris per request walau range()
+  // diminta lebih besar - query yang populasinya bisa >1000 (peserta id, kejadian
+  // pengembalian) WAJIB dipecah 2 batch range(0,999)+range(1000,1999), pola yang
+  // sama dipakai di app/(app)/manpower/page.tsx.
+  const [
+    totalBadgeTervalidasi, totalPending, totalPerluVerifikasi, deposits, recentPeserta,
+    pengembalian1, pengembalian2, wajibKembali1, wajibKembali2,
+  ] = await Promise.all([
     supabase
       .from("peserta")
       .select("*", { count: "exact", head: true })
@@ -29,14 +36,13 @@ export default async function DashboardPage() {
       .select("id, nama, departemen, no_badge, status_badge, tanggal_induction")
       .order("created_at", { ascending: false })
       .limit(8),
-    supabase.from("pengembalian").select("peserta_id, pengembalian_detail(item)").range(0, 1999),
-    supabase
-      .from("peserta")
-      .select("id")
-      .eq("tervalidasi_induction", true)
-      .in("status_badge", ["ACTIVE", "RETURNED", "HANGUS"])
-      .range(0, 1999),
+    supabase.from("pengembalian").select("peserta_id, pengembalian_detail(item)").range(0, 999),
+    supabase.from("pengembalian").select("peserta_id, pengembalian_detail(item)").range(1000, 1999),
+    supabase.from("peserta").select("id").eq("tervalidasi_induction", true).in("status_badge", ["ACTIVE", "RETURNED", "HANGUS"]).range(0, 999),
+    supabase.from("peserta").select("id").eq("tervalidasi_induction", true).in("status_badge", ["ACTIVE", "RETURNED", "HANGUS"]).range(1000, 1999),
   ]);
+  const pengembalianRes = { data: [...(pengembalian1.data ?? []), ...(pengembalian2.data ?? [])] };
+  const totalWajibKembali = { data: [...(wajibKembali1.data ?? []), ...(wajibKembali2.data ?? [])] };
 
   // "Sudah Ada Badge" dihitung dari baris yang tervalidasi_induction = true, yaitu baris
   // yang sudah dicocokkan 1:1 ke master HRD (SUMMARY_INDUCTION&APD.xlsx, sheet INDUCTION).
