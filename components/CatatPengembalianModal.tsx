@@ -68,13 +68,14 @@ function CatatModal({ peserta, sudahTercatat, tarif, onClose }: Props & { onClos
               const kond = kondisi[item] ?? "KEMBALI";
               return (
                 <div key={item} className="flex flex-wrap items-center gap-2 text-sm">
-                  <label className={`flex w-32 items-center gap-2 ${done ? "text-slate-300" : "text-slate-700"}`}>
+                  <label className={`flex w-32 items-center gap-2.5 ${done ? "text-slate-300" : "text-slate-700"}`}>
                     <input
                       type="checkbox"
                       name={`item_${item}`}
                       disabled={done}
                       checked={isChecked}
                       onChange={(e) => setChecked({ ...checked, [item]: e.target.checked })}
+                      className="h-4 w-4 accent-brand-600 disabled:accent-slate-300"
                     />
                     {APD_LABELS[item]}
                   </label>
@@ -123,8 +124,8 @@ function CatatModal({ peserta, sudahTercatat, tarif, onClose }: Props & { onClos
           {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
           <div className="flex justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="rounded-lg px-4 py-2 text-sm text-slate-500 hover:bg-slate-100">Batal</button>
-            <button type="submit" disabled={isPending} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
+            <button type="button" onClick={onClose} className="btn-ghost">Batal</button>
+            <button type="submit" disabled={isPending} className="btn-primary text-sm">
               {isPending ? "Menyimpan..." : "Simpan"}
             </button>
           </div>

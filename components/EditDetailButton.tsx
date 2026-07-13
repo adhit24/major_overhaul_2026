@@ -42,7 +42,7 @@ export function EditDetailButton({ detailId, pesertaId, item, kondisiAwal, poton
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="text-xs text-brand-600 hover:underline">
+      <button type="button" onClick={() => setOpen(true)} className="rounded-md px-2 py-1 text-xs font-medium text-brand-600 hover:bg-brand-50 hover:underline">
         Edit
       </button>
       {open && (
@@ -76,16 +76,16 @@ export function EditDetailButton({ detailId, pesertaId, item, kondisiAwal, poton
                     step={1000}
                     value={potongan}
                     onChange={(e) => setPotongan(Number(e.target.value))}
-                    className="input-field mt-1 w-full"
+                    className="input-field mt-1 w-full tabular-nums"
                   />
                 </label>
               )}
               {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
               <div className="flex justify-end gap-2 pt-1">
-                <button type="button" onClick={() => setOpen(false)} className="rounded-lg px-4 py-2 text-sm text-slate-500 hover:bg-slate-100">
+                <button type="button" onClick={() => setOpen(false)} className="btn-ghost">
                   Batal
                 </button>
-                <button type="submit" disabled={isPending} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
+                <button type="submit" disabled={isPending} className="btn-primary text-sm">
                   {isPending ? "Menyimpan..." : "Simpan"}
                 </button>
               </div>

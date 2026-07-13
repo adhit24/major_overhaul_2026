@@ -1,7 +1,10 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { TopBar } from "@/components/TopBar";
+import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
+import { KondisiBadge } from "@/components/KondisiBadge";
 import { TarifCard } from "@/components/TarifCard";
 import { CatatPengembalianButton } from "@/components/CatatPengembalianModal";
 import { computeStatusPengembalian, formatRupiah } from "@/lib/pengembalian";
@@ -100,16 +103,23 @@ export default async function PengembalianPage({
     return true;
   });
 
+  // Urutkan sesuai urutan departemen resmi (bukan alfabetis) supaya mudah dipakai checklist per divisi.
+  const deptRank = (d: string | null) => {
+    const i = DEPARTEMEN.indexOf((d ?? "") as (typeof DEPARTEMEN)[number]);
+    return i === -1 ? DEPARTEMEN.length : i;
+  };
+  filtered.sort((a, b) => deptRank(a.departemen) - deptRank(b.departemen) || a.nama.localeCompare(b.nama));
+
   return (
     <>
       <TopBar title="Pengembalian ID Card & APD" email={userData.user?.email} />
       <main className="flex-1 space-y-5 p-4 sm:p-6">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          <div className="card"><p className="text-xs text-slate-500">Lengkap</p><p className="text-xl font-bold text-emerald-600">{nLengkap}</p></div>
-          <div className="card"><p className="text-xs text-slate-500">Kurang</p><p className="text-xl font-bold text-amber-600">{nKurang}</p></div>
-          <div className="card"><p className="text-xs text-slate-500">Belum Kembali</p><p className="text-xl font-bold text-slate-700">{nBelum}</p></div>
-          <a href="#daftar-kembali" className="card block hover:ring-1 hover:ring-emerald-200"><p className="text-xs text-slate-500">ID Card Dikembalikan</p><p className="text-xl font-bold text-emerald-600">{kartuRows.length}</p></a>
-          <a href="#daftar-kehilangan" className="card block hover:ring-1 hover:ring-red-200"><p className="text-xs text-slate-500">Total Potongan</p><p className="text-xl font-bold text-red-600">{formatRupiah(totalPotongan)}</p></a>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          <StatCard label="Lengkap" value={nLengkap} tone="success" />
+          <StatCard label="Kurang" value={nKurang} tone="warning" />
+          <StatCard label="Belum Kembali" value={nBelum} />
+          <StatCard label="ID Card Dikembalikan" value={kartuRows.length} tone="success" hint="Klik untuk detail" href="#daftar-kembali" />
+          <StatCard label="Total Potongan" value={formatRupiah(totalPotongan)} tone="danger" hint="Klik untuk detail" href="#daftar-kehilangan" />
         </div>
 
         <TarifCard tarif={tarif} />
@@ -147,7 +157,7 @@ export default async function PengembalianPage({
                         <td className="px-4 py-2.5 text-slate-600">{p?.departemen ?? "-"}</td>
                         <td className="px-4 py-2.5 text-slate-600">{p?.jabatan_deskripsi ?? "-"}</td>
                         <td className="px-4 py-2.5">
-                          <span className={`badge-pill ${r.kondisi === "RUSAK" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>{r.kondisi}</span>
+                          <KondisiBadge kondisi={r.kondisi} />
                         </td>
                         <td className="px-4 py-2.5 text-slate-500">
                           {r.pengembalian?.tanggal ?? "-"}
@@ -195,11 +205,11 @@ export default async function PengembalianPage({
                         <td className="px-4 py-2.5 text-slate-600">{p?.departemen ?? "-"}</td>
                         <td className="px-4 py-2.5 text-slate-600">{APD_LABELS[r.item as ApdItem]}</td>
                         <td className="px-4 py-2.5">
-                          <span className={`badge-pill ${r.kondisi === "HILANG" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"}`}>{r.kondisi}</span>
+                          <KondisiBadge kondisi={r.kondisi} />
                         </td>
                         <td className="px-4 py-2.5 text-slate-500">{r.pengembalian?.tanggal ?? "-"}</td>
                         <td className="px-4 py-2.5 text-slate-500">{r.pengembalian?.petugas ?? "-"}</td>
-                        <td className="px-4 py-2.5 text-right font-medium text-red-600">{formatRupiah(Number(r.potongan))}</td>
+                        <td className="px-4 py-2.5 text-right font-medium tabular-nums text-red-600">{formatRupiah(Number(r.potongan))}</td>
                       </tr>
                     );
                   })}
@@ -239,32 +249,48 @@ export default async function PengembalianPage({
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((r) => (
-                  <tr key={r.id} className="border-b border-slate-50">
-                    <td className="px-5 py-2.5">{r.no_badge ?? "-"}</td>
-                    <td className="px-4 py-2.5 font-medium text-slate-800">
-                      <Link href={`/pengembalian/${r.id}`} className="hover:text-brand-600 hover:underline">{r.nama}</Link>
-                    </td>
-                    <td className="px-4 py-2.5 text-slate-600">{r.departemen ?? "-"}</td>
-                    <td className="px-4 py-2.5"><StatusBadge status={r.status_badge} /></td>
-                    <td className="px-4 py-2.5">
-                      <span className={`badge-pill ${STATUS_STYLE[r.st]}`}>{r.st}</span>
-                      {r.st === "KURANG" && (
-                        <span className="ml-2 text-xs text-slate-400">
-                          kurang: {r.missing.map((m) => APD_LABELS[m as ApdItem]).join(", ")}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5 text-right text-slate-600">{r.potongan ? formatRupiah(r.potongan) : "-"}</td>
-                    <td className="px-4 py-2.5">
-                      <CatatPengembalianButton
-                        peserta={{ id: r.id, nama: r.nama, no_badge: r.no_badge }}
-                        sudahTercatat={r.items}
-                        tarif={tarif}
-                      />
-                    </td>
-                  </tr>
-                ))}
+                {(() => {
+                  let lastDept: string | null | undefined = undefined;
+                  return filtered.map((r) => {
+                    const showGroup = r.departemen !== lastDept;
+                    lastDept = r.departemen;
+                    return (
+                      <Fragment key={r.id}>
+                        {showGroup && (
+                          <tr className="bg-slate-50/80">
+                            <td colSpan={7} className="px-5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                              {r.departemen ?? "Tanpa Divisi"}
+                            </td>
+                          </tr>
+                        )}
+                        <tr className="border-b border-slate-50">
+                          <td className="px-5 py-2.5 tabular-nums">{r.no_badge ?? "-"}</td>
+                          <td className="px-4 py-2.5 font-medium text-slate-800">
+                            <Link href={`/pengembalian/${r.id}`} className="hover:text-brand-600 hover:underline">{r.nama}</Link>
+                          </td>
+                          <td className="px-4 py-2.5 text-slate-600">{r.departemen ?? "-"}</td>
+                          <td className="px-4 py-2.5"><StatusBadge status={r.status_badge} /></td>
+                          <td className="px-4 py-2.5">
+                            <span className={`badge-pill ${STATUS_STYLE[r.st]}`}>{r.st}</span>
+                            {r.st === "KURANG" && (
+                              <span className="ml-2 text-xs text-slate-400">
+                                kurang: {r.missing.map((m) => APD_LABELS[m as ApdItem]).join(", ")}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2.5 text-right tabular-nums text-slate-600">{r.potongan ? formatRupiah(r.potongan) : "-"}</td>
+                          <td className="px-4 py-2.5">
+                            <CatatPengembalianButton
+                              peserta={{ id: r.id, nama: r.nama, no_badge: r.no_badge }}
+                              sudahTercatat={r.items}
+                              tarif={tarif}
+                            />
+                          </td>
+                        </tr>
+                      </Fragment>
+                    );
+                  });
+                })()}
                 {filtered.length === 0 && (
                   <tr><td colSpan={7} className="py-8 text-center text-slate-400">Tidak ada data cocok.</td></tr>
                 )}

@@ -22,10 +22,15 @@ export function TarifCard({ tarif }: { tarif: Record<string, number> }) {
     <div className="card">
       <button onClick={() => setOpen(!open)} className="flex w-full items-center justify-between text-sm font-semibold text-slate-700">
         <span>Tarif Potongan (item HILANG)</span>
-        <span className="text-slate-400">{open ? "▲" : "▼"}</span>
+        <svg
+          className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
       </button>
       {open && (
-        <form onSubmit={onSubmit} className="mt-3 space-y-2">
+        <form onSubmit={onSubmit} className="mt-4 space-y-2.5 border-t border-slate-100 pt-4">
           {APD_ITEMS.map((item) => (
             <label key={item} className="flex items-center justify-between gap-3 text-sm">
               <span className="text-slate-600">{APD_LABELS[item]}</span>
@@ -35,7 +40,7 @@ export function TarifCard({ tarif }: { tarif: Record<string, number> }) {
                 min={0}
                 step={1000}
                 defaultValue={tarif[item] ?? 0}
-                className="input-field w-36 text-right"
+                className="input-field w-36 text-right tabular-nums"
               />
             </label>
           ))}

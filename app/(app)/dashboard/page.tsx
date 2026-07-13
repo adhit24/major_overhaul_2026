@@ -36,8 +36,8 @@ export default async function DashboardPage() {
       .select("id, nama, departemen, no_badge, status_badge, tanggal_induction")
       .order("created_at", { ascending: false })
       .limit(8),
-    supabase.from("pengembalian").select("peserta_id, pengembalian_detail(item)").range(0, 999),
-    supabase.from("pengembalian").select("peserta_id, pengembalian_detail(item)").range(1000, 1999),
+    supabase.from("pengembalian").select("peserta_id, pengembalian_detail(item, kondisi)").range(0, 999),
+    supabase.from("pengembalian").select("peserta_id, pengembalian_detail(item, kondisi)").range(1000, 1999),
     supabase.from("peserta").select("id").eq("tervalidasi_induction", true).in("status_badge", ["ACTIVE", "RETURNED", "HANGUS"]).range(0, 999),
     supabase.from("peserta").select("id").eq("tervalidasi_induction", true).in("status_badge", ["ACTIVE", "RETURNED", "HANGUS"]).range(1000, 1999),
   ]);
@@ -57,13 +57,18 @@ export default async function DashboardPage() {
 
   const validIds = new Set((totalWajibKembali.data ?? []).map((r) => r.id));
   const itemsByPeserta = new Map<number, Set<string>>();
+  const kartuKondisiByPeserta = new Map<number, string>();
   for (const g of pengembalianRes.data ?? []) {
     if (!validIds.has(g.peserta_id)) continue;
     const set = itemsByPeserta.get(g.peserta_id) ?? new Set<string>();
-    for (const d of (g.pengembalian_detail as { item: string }[] | null) ?? []) set.add(d.item);
+    for (const d of (g.pengembalian_detail as { item: string; kondisi: string }[] | null) ?? []) {
+      set.add(d.item);
+      if (d.item === "KARTU") kartuKondisiByPeserta.set(g.peserta_id, d.kondisi);
+    }
     itemsByPeserta.set(g.peserta_id, set);
   }
   const nLengkap = [...itemsByPeserta.values()].filter((s) => APD_ITEMS.every((i) => s.has(i))).length;
+  const nKartuKembali = [...kartuKondisiByPeserta.values()].filter((k) => k !== "HILANG").length;
 
   return (
     <>
@@ -77,26 +82,29 @@ export default async function DashboardPage() {
             value={totalPending.count ?? 0}
             tone={totalPending.count ? "warning" : "default"}
           />
-          <Link href="/peserta?departemen=__PERLU_VERIFIKASI__" className="block">
-            <StatCard
-              label="Departemen Perlu Verifikasi"
-              value={totalPerluVerifikasi.count ?? 0}
-              tone={totalPerluVerifikasi.count ? "warning" : "default"}
-              hint="Klik untuk lihat daftarnya"
-            />
-          </Link>
+          <StatCard
+            label="Departemen Perlu Verifikasi"
+            value={totalPerluVerifikasi.count ?? 0}
+            tone={totalPerluVerifikasi.count ? "warning" : "default"}
+            hint="Klik untuk lihat daftarnya"
+            href="/peserta?departemen=__PERLU_VERIFIKASI__"
+          />
           <StatCard label="Total Deposit Tercatat" value={formatRupiah(totalDeposit)} hint={`${doneBatches.length} batch DONE`} />
-          <Link href="/pengembalian" className="block">
-            <StatCard label="Pengembalian Lengkap" value={`${nLengkap} / ${validIds.size}`} tone="success" hint="Klik untuk detail" />
-          </Link>
+          <StatCard
+            label="ID Card Dikembalikan"
+            value={`${nKartuKembali} / ${validIds.size}`}
+            tone="success"
+            hint={`${nLengkap} set APD lengkap · klik untuk detail`}
+            href="/pengembalian"
+          />
         </div>
 
         <div className="card">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-900">Input Terbaru</h2>
-            <a href="/peserta" className="text-sm font-medium text-brand-600 hover:underline">
+            <Link href="/peserta" className="text-sm font-medium text-brand-600 hover:underline">
               Lihat semua →
-            </a>
+            </Link>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
