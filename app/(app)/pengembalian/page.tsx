@@ -119,6 +119,17 @@ export default async function PengembalianPage({
 
   filtered.sort((a, b) => deptRank(a.departemen) - deptRank(b.departemen) || a.nama.localeCompare(b.nama));
 
+  // Pencarian (nama/badge/PIN) & filter divisi juga diterapkan ke daftar kembali & kehilangan,
+  // bukan cuma ke tabel checklist utama, supaya satu kotak cari bisa dipakai untuk ketiganya.
+  const matchesSearch = (p: { nama?: string; no_badge?: string | null; no_erp?: string | null; departemen?: string | null } | null | undefined) => {
+    if (!p) return false;
+    if (dept && p.departemen !== dept) return false;
+    if (qLower && !(`${p.nama ?? ""} ${p.no_badge ?? ""} ${p.no_erp ?? ""}`.toLowerCase().includes(qLower))) return false;
+    return true;
+  };
+  const filteredKartuRows = kartuRows.filter((r) => matchesSearch(r.pengembalian?.peserta));
+  const filteredRugiRows = rugiRows.filter((r) => matchesSearch(r.pengembalian?.peserta));
+
   return (
     <>
       <TopBar title="Pengembalian ID Card & APD" email={userData.user?.email} />
@@ -133,11 +144,45 @@ export default async function PengembalianPage({
 
         <TarifCard tarif={tarif} />
 
-        {kartuRows.length > 0 && (
+        <form method="get" className="card flex flex-wrap items-end gap-3">
+          <div className="flex-1 min-w-[220px]">
+            <label className="label-field">Cari nama / badge / PIN</label>
+            <input name="q" defaultValue={q ?? ""} placeholder="Ketik nama, no badge, atau PIN..." className="input-field" />
+          </div>
+          <div>
+            <label className="label-field">Divisi</label>
+            <select name="dept" defaultValue={dept ?? ""} className="input-field">
+              <option value="">Semua Divisi</option>
+              {DEPARTEMEN.map((d) => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="label-field">Status Checklist</label>
+            <select name="status" defaultValue={status ?? ""} className="input-field">
+              <option value="">Semua Status</option>
+              <option value="LENGKAP">LENGKAP</option>
+              <option value="KURANG">KURANG</option>
+              <option value="BELUM">BELUM</option>
+            </select>
+          </div>
+          <button type="submit" className="btn-primary text-sm">Cari</button>
+          {(q || dept || status) && (
+            <Link href="/pengembalian" className="btn-ghost text-sm">Reset</Link>
+          )}
+          <p className="w-full text-xs text-slate-400">
+            Pencarian &amp; divisi berlaku untuk daftar kembali, kehilangan, dan tabel checklist di bawah. Status checklist hanya berlaku untuk tabel checklist.
+          </p>
+        </form>
+
+        {filteredKartuRows.length > 0 && (
           <div id="daftar-kembali" className="card p-0 overflow-hidden scroll-mt-4">
             <div className="px-5 py-4 border-b border-slate-100">
               <h2 className="text-sm font-semibold text-slate-800">Daftar ID Card Dikembalikan</h2>
-              <p className="text-xs text-slate-400 mt-0.5">{kartuRows.length} kartu sudah dikembalikan</p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {filteredKartuRows.length === kartuRows.length
+                  ? `${kartuRows.length} kartu sudah dikembalikan`
+                  : `${filteredKartuRows.length} dari ${kartuRows.length} kartu (sesuai pencarian)`}
+              </p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -156,7 +201,7 @@ export default async function PengembalianPage({
                 <tbody>
                   {(() => {
                     let lastDept: string | null | undefined = undefined;
-                    return kartuRows.map((r, i) => {
+                    return filteredKartuRows.map((r, i) => {
                       const p = r.pengembalian?.peserta;
                       const showGroup = p?.departemen !== lastDept;
                       lastDept = p?.departemen;
@@ -196,11 +241,15 @@ export default async function PengembalianPage({
           </div>
         )}
 
-        {rugiRows.length > 0 && (
+        {filteredRugiRows.length > 0 && (
           <div id="daftar-kehilangan" className="card p-0 overflow-hidden scroll-mt-4">
             <div className="px-5 py-4 border-b border-slate-100">
               <h2 className="text-sm font-semibold text-slate-800">Daftar Kehilangan / Kerusakan</h2>
-              <p className="text-xs text-slate-400 mt-0.5">{rugiRows.length} item · total potongan {formatRupiah(totalPotongan)}</p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {filteredRugiRows.length === rugiRows.length
+                  ? `${rugiRows.length} item · total potongan ${formatRupiah(totalPotongan)}`
+                  : `${filteredRugiRows.length} dari ${rugiRows.length} item (sesuai pencarian)`}
+              </p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -219,7 +268,7 @@ export default async function PengembalianPage({
                 <tbody>
                   {(() => {
                     let lastDept: string | null | undefined = undefined;
-                    return rugiRows.map((r, i) => {
+                    return filteredRugiRows.map((r, i) => {
                       const p = r.pengembalian?.peserta;
                       const showGroup = p?.departemen !== lastDept;
                       lastDept = p?.departemen;
@@ -256,22 +305,15 @@ export default async function PengembalianPage({
           </div>
         )}
 
-        <form method="get" className="flex flex-wrap items-end gap-3">
-          <input name="q" defaultValue={q ?? ""} placeholder="Cari nama / badge / PIN" className="input-field w-64" />
-          <select name="dept" defaultValue={dept ?? ""} className="input-field">
-            <option value="">Semua Divisi</option>
-            {DEPARTEMEN.map((d) => <option key={d} value={d}>{d}</option>)}
-          </select>
-          <select name="status" defaultValue={status ?? ""} className="input-field">
-            <option value="">Semua Status</option>
-            <option value="LENGKAP">LENGKAP</option>
-            <option value="KURANG">KURANG</option>
-            <option value="BELUM">BELUM</option>
-          </select>
-          <button type="submit" className="btn-primary text-sm">Filter</button>
-        </form>
-
         <div className="card p-0 overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100">
+            <h2 className="text-sm font-semibold text-slate-800">Checklist Semua Peserta</h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {filtered.length === rows.length
+                ? `${rows.length} peserta`
+                : `${filtered.length} dari ${rows.length} peserta (sesuai pencarian)`}
+            </p>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
