@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { TopBar } from "@/components/TopBar";
 import { StatusBadge } from "@/components/StatusBadge";
 import { HapusPengembalianButton } from "@/components/HapusPengembalianButton";
+import { EditDetailButton } from "@/components/EditDetailButton";
 import { formatRupiah } from "@/lib/pengembalian";
 import { APD_LABELS, type ApdItem } from "@/lib/constants";
 
@@ -27,9 +28,13 @@ export default async function RiwayatPengembalianPage({
 
   const { data: kejadian } = await supabase
     .from("pengembalian")
-    .select("id, tanggal, petugas, catatan, is_migrasi, pengembalian_detail(item, kondisi, potongan)")
+    .select("id, tanggal, petugas, catatan, is_migrasi, pengembalian_detail(id, item, kondisi, potongan)")
     .eq("peserta_id", p.id)
     .order("tanggal", { ascending: false });
+
+  const { data: tarifRows } = await supabase.from("tarif_potongan").select("item, tarif_hilang");
+  const tarif: Record<string, number> = {};
+  for (const t of tarifRows ?? []) tarif[t.item] = Number(t.tarif_hilang);
 
   return (
     <>
@@ -50,7 +55,7 @@ export default async function RiwayatPengembalianPage({
         )}
 
         {(kejadian ?? []).map((g) => {
-          const det = (g.pengembalian_detail as { item: string; kondisi: string; potongan: number }[] | null) ?? [];
+          const det = (g.pengembalian_detail as { id: number; item: string; kondisi: string; potongan: number }[] | null) ?? [];
           const total = det.reduce((s, d) => s + Number(d.potongan), 0);
           return (
             <div key={g.id} className="card space-y-2">
@@ -70,10 +75,20 @@ export default async function RiwayatPengembalianPage({
                       <td className="py-1.5">{APD_LABELS[d.item as ApdItem]}</td>
                       <td className="py-1.5"><StatusBadge status={d.kondisi === "KEMBALI" ? "ACTIVE" : d.kondisi === "RUSAK" ? "PARTIAL" : "HANGUS"} /> <span className="text-xs text-slate-500">{d.kondisi}</span></td>
                       <td className="py-1.5 text-right">{Number(d.potongan) ? formatRupiah(Number(d.potongan)) : "-"}</td>
+                      <td className="py-1.5 pl-3 text-right">
+                        <EditDetailButton
+                          detailId={d.id}
+                          pesertaId={p.id}
+                          item={d.item as ApdItem}
+                          kondisiAwal={d.kondisi}
+                          potonganAwal={Number(d.potongan)}
+                          tarif={tarif}
+                        />
+                      </td>
                     </tr>
                   ))}
                   {total > 0 && (
-                    <tr><td className="pt-2 font-semibold" colSpan={2}>Total potongan</td><td className="pt-2 text-right font-semibold text-red-600">{formatRupiah(total)}</td></tr>
+                    <tr><td className="pt-2 font-semibold" colSpan={2}>Total potongan</td><td className="pt-2 text-right font-semibold text-red-600">{formatRupiah(total)}</td><td /></tr>
                   )}
                 </tbody>
               </table>

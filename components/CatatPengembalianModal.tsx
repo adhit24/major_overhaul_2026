@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { catatPengembalian } from "@/app/(app)/pengembalian/actions";
 import { APD_ITEMS, APD_LABELS, KONDISI_ITEM, type ApdItem } from "@/lib/constants";
 
@@ -77,7 +78,14 @@ function CatatModal({ peserta, sudahTercatat, tarif, onClose }: Props & { onClos
                     />
                     {APD_LABELS[item]}
                   </label>
-                  {done && <span className="text-xs text-emerald-600">sudah tercatat</span>}
+                  {done && (
+                    <span className="text-xs text-emerald-600">
+                      sudah tercatat ·{" "}
+                      <Link href={`/pengembalian/${peserta.id}`} className="underline hover:text-emerald-700">
+                        edit di riwayat
+                      </Link>
+                    </span>
+                  )}
                   {!done && isChecked && (
                     <>
                       <select

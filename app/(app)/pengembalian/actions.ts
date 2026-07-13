@@ -80,6 +80,34 @@ export async function catatPengembalian(formData: FormData) {
   return { ok: true };
 }
 
+export async function updatePengembalianDetail(formData: FormData) {
+  const detailId = Number(formData.get("detail_id"));
+  const pesertaId = Number(formData.get("peserta_id"));
+  const item = String(formData.get("item") ?? "");
+  const kondisi = String(formData.get("kondisi") ?? "");
+  const potongan = Number(formData.get("potongan") ?? 0);
+
+  if (!detailId || !pesertaId) return { error: "Data tidak valid." };
+  if (!KONDISI_ITEM.includes(kondisi as (typeof KONDISI_ITEM)[number]))
+    return { error: "Kondisi tidak valid." };
+  if (!Number.isFinite(potongan) || potongan < 0) return { error: "Potongan tidak valid." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("pengembalian_detail")
+    .update({ kondisi, potongan })
+    .eq("id", detailId);
+  if (error) return { error: error.message };
+
+  if (item === "KARTU") {
+    const newStatus = kondisi === "HILANG" ? "HANGUS" : "RETURNED";
+    await supabase.from("peserta").update({ status_badge: newStatus }).eq("id", pesertaId);
+  }
+
+  revalidateAll();
+  return { ok: true };
+}
+
 export async function hapusPengembalian(formData: FormData) {
   const pengembalianId = Number(formData.get("pengembalian_id"));
   const pesertaId = Number(formData.get("peserta_id"));
