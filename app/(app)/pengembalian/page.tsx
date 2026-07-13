@@ -29,17 +29,29 @@ export default async function PengembalianPage({
   // Supabase/PostgREST membatasi maksimum 1000 baris per request walau range()
   // diminta lebih besar - semua query yang populasinya bisa >1000 dipecah 2 batch.
   const cols = "id, no_badge, no_erp, nama, departemen, status_badge";
-  const [p1, p2, g1, g2, tarifRes] = await Promise.all([
+  const [p1, p2, g1, g2, tarifRes, rugiRes] = await Promise.all([
     supabase.from("peserta").select(cols).eq("tervalidasi_induction", true).in("status_badge", ["ACTIVE", "RETURNED", "HANGUS"]).order("nama").range(0, 999),
     supabase.from("peserta").select(cols).eq("tervalidasi_induction", true).in("status_badge", ["ACTIVE", "RETURNED", "HANGUS"]).order("nama").range(1000, 1999),
     supabase.from("pengembalian").select("id, peserta_id, tanggal, pengembalian_detail(item, kondisi, potongan)").range(0, 999),
     supabase.from("pengembalian").select("id, peserta_id, tanggal, pengembalian_detail(item, kondisi, potongan)").range(1000, 1999),
     supabase.from("tarif_potongan").select("item, tarif_hilang"),
+    supabase
+      .from("pengembalian_detail")
+      .select("item, kondisi, potongan, pengembalian(id, tanggal, petugas, peserta(id, nama, no_badge, departemen))")
+      .neq("kondisi", "KEMBALI")
+      .order("potongan", { ascending: false }),
   ]);
   const peserta = [...(p1.data ?? []), ...(p2.data ?? [])];
   const kejadian = [...(g1.data ?? []), ...(g2.data ?? [])];
   const tarif: Record<string, number> = {};
   for (const t of tarifRes.data ?? []) tarif[t.item] = Number(t.tarif_hilang);
+
+  type RugiRow = {
+    item: string; kondisi: string; potongan: number;
+    pengembalian: { id: number; tanggal: string; petugas: string | null;
+      peserta: { id: number; nama: string; no_badge: string | null; departemen: string | null } | null } | null;
+  };
+  const rugiRows = (rugiRes.data ?? []) as unknown as RugiRow[];
 
   // agregasi per peserta
   const itemsByPeserta = new Map<number, string[]>();
@@ -81,10 +93,56 @@ export default async function PengembalianPage({
           <div className="card"><p className="text-xs text-slate-500">Lengkap</p><p className="text-xl font-bold text-emerald-600">{nLengkap}</p></div>
           <div className="card"><p className="text-xs text-slate-500">Kurang</p><p className="text-xl font-bold text-amber-600">{nKurang}</p></div>
           <div className="card"><p className="text-xs text-slate-500">Belum Kembali</p><p className="text-xl font-bold text-slate-700">{nBelum}</p></div>
-          <div className="card"><p className="text-xs text-slate-500">Total Potongan</p><p className="text-xl font-bold text-red-600">{formatRupiah(totalPotongan)}</p></div>
+          <a href="#daftar-kehilangan" className="card block hover:ring-1 hover:ring-red-200"><p className="text-xs text-slate-500">Total Potongan</p><p className="text-xl font-bold text-red-600">{formatRupiah(totalPotongan)}</p></a>
         </div>
 
         <TarifCard tarif={tarif} />
+
+        {rugiRows.length > 0 && (
+          <div id="daftar-kehilangan" className="card p-0 overflow-hidden scroll-mt-4">
+            <div className="px-5 py-4 border-b border-slate-100">
+              <h2 className="text-sm font-semibold text-slate-800">Daftar Kehilangan / Kerusakan</h2>
+              <p className="text-xs text-slate-400 mt-0.5">{rugiRows.length} item · total potongan {formatRupiah(totalPotongan)}</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead>
+                  <tr className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                    <th className="px-5 py-3">No Badge</th>
+                    <th className="px-4 py-3">Nama</th>
+                    <th className="px-4 py-3">Divisi</th>
+                    <th className="px-4 py-3">Item</th>
+                    <th className="px-4 py-3">Kondisi</th>
+                    <th className="px-4 py-3">Tanggal</th>
+                    <th className="px-4 py-3">Petugas</th>
+                    <th className="px-4 py-3 text-right">Potongan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rugiRows.map((r, i) => {
+                    const p = r.pengembalian?.peserta;
+                    return (
+                      <tr key={`${r.pengembalian?.id}-${r.item}-${i}`} className="border-b border-slate-50">
+                        <td className="px-5 py-2.5">{p?.no_badge ?? "-"}</td>
+                        <td className="px-4 py-2.5 font-medium text-slate-800">
+                          {p ? <Link href={`/pengembalian/${p.id}`} className="hover:text-brand-600 hover:underline">{p.nama}</Link> : "-"}
+                        </td>
+                        <td className="px-4 py-2.5 text-slate-600">{p?.departemen ?? "-"}</td>
+                        <td className="px-4 py-2.5 text-slate-600">{APD_LABELS[r.item as ApdItem]}</td>
+                        <td className="px-4 py-2.5">
+                          <span className={`badge-pill ${r.kondisi === "HILANG" ? "bg-red-50 text-red-700" : "bg-amber-50 text-amber-700"}`}>{r.kondisi}</span>
+                        </td>
+                        <td className="px-4 py-2.5 text-slate-500">{r.pengembalian?.tanggal ?? "-"}</td>
+                        <td className="px-4 py-2.5 text-slate-500">{r.pengembalian?.petugas ?? "-"}</td>
+                        <td className="px-4 py-2.5 text-right font-medium text-red-600">{formatRupiah(Number(r.potongan))}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         <form method="get" className="flex flex-wrap items-end gap-3">
           <input name="q" defaultValue={q ?? ""} placeholder="Cari nama / badge / PIN" className="input-field w-64" />
