@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { TopBar } from "@/components/TopBar";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
+import { APD_ITEMS } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +15,7 @@ export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
 
-  const [totalBadgeTervalidasi, totalPending, totalPerluVerifikasi, deposits, recentPeserta] = await Promise.all([
+  const [totalBadgeTervalidasi, totalPending, totalPerluVerifikasi, deposits, recentPeserta, pengembalianRes, totalWajibKembali] = await Promise.all([
     supabase
       .from("peserta")
       .select("*", { count: "exact", head: true })
@@ -28,6 +29,8 @@ export default async function DashboardPage() {
       .select("id, nama, departemen, no_badge, status_badge, tanggal_induction")
       .order("created_at", { ascending: false })
       .limit(8),
+    supabase.from("pengembalian").select("peserta_id, pengembalian_detail(item)").range(0, 1999),
+    supabase.from("peserta").select("*", { count: "exact", head: true }).in("status_badge", ["ACTIVE", "RETURNED", "HANGUS"]),
   ]);
 
   // "Sudah Ada Badge" dihitung dari baris yang tervalidasi_induction = true, yaitu baris
@@ -41,11 +44,19 @@ export default async function DashboardPage() {
   const totalKartu   = doneBatches.reduce((s, b) => s + Number(b.jumlah_kartu ?? 0), 0);
   const totalDeposit = doneBatches.reduce((sum, row) => sum + Number(row.total_deposit ?? 0), 0);
 
+  const itemsByPeserta = new Map<number, Set<string>>();
+  for (const g of pengembalianRes.data ?? []) {
+    const set = itemsByPeserta.get(g.peserta_id) ?? new Set<string>();
+    for (const d of (g.pengembalian_detail as { item: string }[] | null) ?? []) set.add(d.item);
+    itemsByPeserta.set(g.peserta_id, set);
+  }
+  const nLengkap = [...itemsByPeserta.values()].filter((s) => APD_ITEMS.every((i) => s.has(i))).length;
+
   return (
     <>
       <TopBar title="Dashboard" email={userData.user?.email} />
       <main className="flex-1 space-y-6 p-4 sm:p-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
           <StatCard label="Total Kartu Diajukan" value={totalKartu} hint="batch DONE" />
           <StatCard label="Sudah Ada Badge" value={totalBadgeValid} tone="success" />
           <StatCard
@@ -62,6 +73,9 @@ export default async function DashboardPage() {
             />
           </Link>
           <StatCard label="Total Deposit Tercatat" value={formatRupiah(totalDeposit)} hint={`${doneBatches.length} batch DONE`} />
+          <Link href="/pengembalian" className="block">
+            <StatCard label="Pengembalian Lengkap" value={`${nLengkap} / ${totalWajibKembali.count ?? 0}`} tone="success" hint="Klik untuk detail" />
+          </Link>
         </div>
 
         <div className="card">

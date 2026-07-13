@@ -48,6 +48,16 @@ const NAV = [
       </svg>
     ),
   },
+  {
+    href: '/pengembalian',
+    label: 'Pengembalian',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+        <path d="M3 12a9 9 0 0 1 15.5-6.4M21 12a9 9 0 0 1-15.5 6.4" />
+        <path d="M18.5 2v4h-4M5.5 22v-4h4" />
+      </svg>
+    ),
+  },
 ];
 
 export function BottomNav() {

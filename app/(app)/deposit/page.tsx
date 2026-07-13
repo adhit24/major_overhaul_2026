@@ -34,6 +34,9 @@ export default async function DepositPage({
   const doneKartu    = doneBatches.reduce((s, b) => s + Number(b.jumlah_kartu ?? 0), 0);
   const doneDeposit  = doneBatches.reduce((s, b) => s + Number(b.total_deposit ?? 0), 0);
 
+  const { data: potonganRows } = await supabase.from("pengembalian_detail").select("potongan").range(0, 1999);
+  const totalPotongan = (potonganRows ?? []).reduce((s, r) => s + Number(r.potongan), 0);
+
   return (
     <>
       <TopBar title="Summary Deposit" email={userData.user?.email} />
@@ -53,7 +56,7 @@ export default async function DepositPage({
         )}
 
         {/* ── Summary cards ── */}
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
           <div className="card text-center">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Batch</p>
             <p className="mt-2 text-2xl font-bold text-slate-800 sm:text-3xl">{batches?.length ?? 0}</p>
@@ -71,6 +74,11 @@ export default async function DepositPage({
           <div className="card text-center">
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Tarif / Kartu</p>
             <p className="mt-2 text-lg font-bold text-emerald-600 sm:text-2xl">Rp 50.000</p>
+          </div>
+          <div className="card text-center">
+            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Potongan Tercatat</p>
+            <p className={`mt-2 text-lg font-bold sm:text-2xl ${totalPotongan ? "text-red-600" : "text-slate-800"}`}>{formatRupiah(totalPotongan)}</p>
+            <p className="mt-1 text-xs text-slate-400">dari pengembalian hilang/rusak</p>
           </div>
         </div>
 

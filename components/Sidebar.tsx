@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { href: "/peserta",    label: "Database Peserta",  icon: "👥" },
   { href: "/manpower",   label: "Manpower Divisi",   icon: "🏭" },
   { href: "/deposit",    label: "Summary Deposit",   icon: "💳" },
+  { href: "/pengembalian", label: "Pengembalian",    icon: "🔄" },
 ];
 
 export function Sidebar() {
