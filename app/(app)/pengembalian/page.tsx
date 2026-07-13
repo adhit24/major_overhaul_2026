@@ -24,10 +24,12 @@ export default async function PengembalianPage({
   const supabase = await createClient();
   const { data: userData } = await supabase.auth.getUser();
 
+  // Populasi dibatasi ke peserta tervalidasi_induction=true agar konsisten dengan
+  // kartu "Sudah Ada Badge" di Dashboard (baris yang sudah dicocokkan 1:1 ke master HRD).
   const cols = "id, no_badge, no_erp, nama, departemen, status_badge";
   const [p1, p2, gRes, tarifRes] = await Promise.all([
-    supabase.from("peserta").select(cols).in("status_badge", ["ACTIVE", "RETURNED", "HANGUS"]).order("nama").range(0, 999),
-    supabase.from("peserta").select(cols).in("status_badge", ["ACTIVE", "RETURNED", "HANGUS"]).order("nama").range(1000, 1999),
+    supabase.from("peserta").select(cols).eq("tervalidasi_induction", true).in("status_badge", ["ACTIVE", "RETURNED", "HANGUS"]).order("nama").range(0, 999),
+    supabase.from("peserta").select(cols).eq("tervalidasi_induction", true).in("status_badge", ["ACTIVE", "RETURNED", "HANGUS"]).order("nama").range(1000, 1999),
     supabase.from("pengembalian").select("id, peserta_id, tanggal, pengembalian_detail(item, kondisi, potongan)").range(0, 1999),
     supabase.from("tarif_potongan").select("item, tarif_hilang"),
   ]);

@@ -30,7 +30,12 @@ export default async function DashboardPage() {
       .order("created_at", { ascending: false })
       .limit(8),
     supabase.from("pengembalian").select("peserta_id, pengembalian_detail(item)").range(0, 1999),
-    supabase.from("peserta").select("*", { count: "exact", head: true }).in("status_badge", ["ACTIVE", "RETURNED", "HANGUS"]),
+    supabase
+      .from("peserta")
+      .select("id")
+      .eq("tervalidasi_induction", true)
+      .in("status_badge", ["ACTIVE", "RETURNED", "HANGUS"])
+      .range(0, 1999),
   ]);
 
   // "Sudah Ada Badge" dihitung dari baris yang tervalidasi_induction = true, yaitu baris
@@ -44,8 +49,10 @@ export default async function DashboardPage() {
   const totalKartu   = doneBatches.reduce((s, b) => s + Number(b.jumlah_kartu ?? 0), 0);
   const totalDeposit = doneBatches.reduce((sum, row) => sum + Number(row.total_deposit ?? 0), 0);
 
+  const validIds = new Set((totalWajibKembali.data ?? []).map((r) => r.id));
   const itemsByPeserta = new Map<number, Set<string>>();
   for (const g of pengembalianRes.data ?? []) {
+    if (!validIds.has(g.peserta_id)) continue;
     const set = itemsByPeserta.get(g.peserta_id) ?? new Set<string>();
     for (const d of (g.pengembalian_detail as { item: string }[] | null) ?? []) set.add(d.item);
     itemsByPeserta.set(g.peserta_id, set);
@@ -74,7 +81,7 @@ export default async function DashboardPage() {
           </Link>
           <StatCard label="Total Deposit Tercatat" value={formatRupiah(totalDeposit)} hint={`${doneBatches.length} batch DONE`} />
           <Link href="/pengembalian" className="block">
-            <StatCard label="Pengembalian Lengkap" value={`${nLengkap} / ${totalWajibKembali.count ?? 0}`} tone="success" hint="Klik untuk detail" />
+            <StatCard label="Pengembalian Lengkap" value={`${nLengkap} / ${validIds.size}`} tone="success" hint="Klik untuk detail" />
           </Link>
         </div>
 
