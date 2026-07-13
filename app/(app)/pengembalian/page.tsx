@@ -59,7 +59,18 @@ export default async function PengembalianPage({
     pengembalian: { id: number; tanggal: string; petugas: string | null;
       peserta: { id: number; nama: string; no_badge: string | null; departemen: string | null } | null } | null;
   };
-  const rugiRows = (rugiRes.data ?? []) as unknown as RugiRow[];
+  // Urutkan sesuai urutan departemen resmi (bukan alfabetis) supaya mudah dipakai checklist per divisi.
+  const deptRank = (d: string | null | undefined) => {
+    const i = DEPARTEMEN.indexOf((d ?? "") as (typeof DEPARTEMEN)[number]);
+    return i === -1 ? DEPARTEMEN.length : i;
+  };
+
+  const rugiRows = ((rugiRes.data ?? []) as unknown as RugiRow[])
+    .slice()
+    .sort((a, b) =>
+      deptRank(a.pengembalian?.peserta?.departemen) - deptRank(b.pengembalian?.peserta?.departemen) ||
+      (a.pengembalian?.peserta?.nama ?? "").localeCompare(b.pengembalian?.peserta?.nama ?? "")
+    );
 
   type KartuRow = {
     kondisi: string; potongan: number;
@@ -69,7 +80,10 @@ export default async function PengembalianPage({
   };
   const kartuRows = ((kartuRes.data ?? []) as unknown as KartuRow[])
     .slice()
-    .sort((a, b) => (b.pengembalian?.tanggal ?? "").localeCompare(a.pengembalian?.tanggal ?? ""));
+    .sort((a, b) =>
+      deptRank(a.pengembalian?.peserta?.departemen) - deptRank(b.pengembalian?.peserta?.departemen) ||
+      (a.pengembalian?.peserta?.nama ?? "").localeCompare(b.pengembalian?.peserta?.nama ?? "")
+    );
 
   // agregasi per peserta
   const itemsByPeserta = new Map<number, string[]>();
@@ -103,11 +117,6 @@ export default async function PengembalianPage({
     return true;
   });
 
-  // Urutkan sesuai urutan departemen resmi (bukan alfabetis) supaya mudah dipakai checklist per divisi.
-  const deptRank = (d: string | null) => {
-    const i = DEPARTEMEN.indexOf((d ?? "") as (typeof DEPARTEMEN)[number]);
-    return i === -1 ? DEPARTEMEN.length : i;
-  };
   filtered.sort((a, b) => deptRank(a.departemen) - deptRank(b.departemen) || a.nama.localeCompare(b.nama));
 
   return (
@@ -145,28 +154,42 @@ export default async function PengembalianPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {kartuRows.map((r, i) => {
-                    const p = r.pengembalian?.peserta;
-                    return (
-                      <tr key={`${r.pengembalian?.id}-${i}`} className="border-b border-slate-50">
-                        <td className="px-5 py-2.5">{p?.no_badge ?? "-"}</td>
-                        <td className="px-4 py-2.5 font-medium text-slate-800">
-                          {p ? <Link href={`/pengembalian/${p.id}`} className="hover:text-brand-600 hover:underline">{p.nama}</Link> : "-"}
-                        </td>
-                        <td className="px-4 py-2.5 text-slate-500">{p?.no_erp ?? "-"}</td>
-                        <td className="px-4 py-2.5 text-slate-600">{p?.departemen ?? "-"}</td>
-                        <td className="px-4 py-2.5 text-slate-600">{p?.jabatan_deskripsi ?? "-"}</td>
-                        <td className="px-4 py-2.5">
-                          <KondisiBadge kondisi={r.kondisi} />
-                        </td>
-                        <td className="px-4 py-2.5 text-slate-500">
-                          {r.pengembalian?.tanggal ?? "-"}
-                          {r.pengembalian?.is_migrasi && <span className="ml-2 badge-pill bg-slate-100 text-slate-500">migrasi</span>}
-                        </td>
-                        <td className="px-4 py-2.5 text-slate-500">{r.pengembalian?.petugas ?? "-"}</td>
-                      </tr>
-                    );
-                  })}
+                  {(() => {
+                    let lastDept: string | null | undefined = undefined;
+                    return kartuRows.map((r, i) => {
+                      const p = r.pengembalian?.peserta;
+                      const showGroup = p?.departemen !== lastDept;
+                      lastDept = p?.departemen;
+                      return (
+                        <Fragment key={`${r.pengembalian?.id}-${i}`}>
+                          {showGroup && (
+                            <tr className="bg-slate-50/80">
+                              <td colSpan={8} className="px-5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                {p?.departemen ?? "Tanpa Divisi"}
+                              </td>
+                            </tr>
+                          )}
+                          <tr className="border-b border-slate-50">
+                            <td className="px-5 py-2.5 tabular-nums">{p?.no_badge ?? "-"}</td>
+                            <td className="px-4 py-2.5 font-medium text-slate-800">
+                              {p ? <Link href={`/pengembalian/${p.id}`} className="hover:text-brand-600 hover:underline">{p.nama}</Link> : "-"}
+                            </td>
+                            <td className="px-4 py-2.5 tabular-nums text-slate-500">{p?.no_erp ?? "-"}</td>
+                            <td className="px-4 py-2.5 text-slate-600">{p?.departemen ?? "-"}</td>
+                            <td className="px-4 py-2.5 text-slate-600">{p?.jabatan_deskripsi ?? "-"}</td>
+                            <td className="px-4 py-2.5">
+                              <KondisiBadge kondisi={r.kondisi} />
+                            </td>
+                            <td className="px-4 py-2.5 text-slate-500">
+                              {r.pengembalian?.tanggal ?? "-"}
+                              {r.pengembalian?.is_migrasi && <span className="ml-2 badge-pill bg-slate-100 text-slate-500">migrasi</span>}
+                            </td>
+                            <td className="px-4 py-2.5 text-slate-500">{r.pengembalian?.petugas ?? "-"}</td>
+                          </tr>
+                        </Fragment>
+                      );
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>
@@ -194,25 +217,39 @@ export default async function PengembalianPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {rugiRows.map((r, i) => {
-                    const p = r.pengembalian?.peserta;
-                    return (
-                      <tr key={`${r.pengembalian?.id}-${r.item}-${i}`} className="border-b border-slate-50">
-                        <td className="px-5 py-2.5">{p?.no_badge ?? "-"}</td>
-                        <td className="px-4 py-2.5 font-medium text-slate-800">
-                          {p ? <Link href={`/pengembalian/${p.id}`} className="hover:text-brand-600 hover:underline">{p.nama}</Link> : "-"}
-                        </td>
-                        <td className="px-4 py-2.5 text-slate-600">{p?.departemen ?? "-"}</td>
-                        <td className="px-4 py-2.5 text-slate-600">{APD_LABELS[r.item as ApdItem]}</td>
-                        <td className="px-4 py-2.5">
-                          <KondisiBadge kondisi={r.kondisi} />
-                        </td>
-                        <td className="px-4 py-2.5 text-slate-500">{r.pengembalian?.tanggal ?? "-"}</td>
-                        <td className="px-4 py-2.5 text-slate-500">{r.pengembalian?.petugas ?? "-"}</td>
-                        <td className="px-4 py-2.5 text-right font-medium tabular-nums text-red-600">{formatRupiah(Number(r.potongan))}</td>
-                      </tr>
-                    );
-                  })}
+                  {(() => {
+                    let lastDept: string | null | undefined = undefined;
+                    return rugiRows.map((r, i) => {
+                      const p = r.pengembalian?.peserta;
+                      const showGroup = p?.departemen !== lastDept;
+                      lastDept = p?.departemen;
+                      return (
+                        <Fragment key={`${r.pengembalian?.id}-${r.item}-${i}`}>
+                          {showGroup && (
+                            <tr className="bg-slate-50/80">
+                              <td colSpan={8} className="px-5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                {p?.departemen ?? "Tanpa Divisi"}
+                              </td>
+                            </tr>
+                          )}
+                          <tr className="border-b border-slate-50">
+                            <td className="px-5 py-2.5 tabular-nums">{p?.no_badge ?? "-"}</td>
+                            <td className="px-4 py-2.5 font-medium text-slate-800">
+                              {p ? <Link href={`/pengembalian/${p.id}`} className="hover:text-brand-600 hover:underline">{p.nama}</Link> : "-"}
+                            </td>
+                            <td className="px-4 py-2.5 text-slate-600">{p?.departemen ?? "-"}</td>
+                            <td className="px-4 py-2.5 text-slate-600">{APD_LABELS[r.item as ApdItem]}</td>
+                            <td className="px-4 py-2.5">
+                              <KondisiBadge kondisi={r.kondisi} />
+                            </td>
+                            <td className="px-4 py-2.5 text-slate-500">{r.pengembalian?.tanggal ?? "-"}</td>
+                            <td className="px-4 py-2.5 text-slate-500">{r.pengembalian?.petugas ?? "-"}</td>
+                            <td className="px-4 py-2.5 text-right font-medium tabular-nums text-red-600">{formatRupiah(Number(r.potongan))}</td>
+                          </tr>
+                        </Fragment>
+                      );
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>
