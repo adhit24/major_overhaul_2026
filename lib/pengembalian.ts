@@ -20,3 +20,11 @@ export function formatRupiah(value: number) {
     maximumFractionDigits: 0,
   }).format(value);
 }
+
+// Petugas disimpan sebagai email login (mis. hseadmin@koinpratama.com); di cetakan/PDF
+// domainnya selalu sama untuk semua baris jadi tidak perlu ditampilkan - cukup bagian depannya
+// supaya tidak memaksa kolom pecah di tengah kata.
+export function formatPetugas(email: string | null | undefined) {
+  if (!email) return "-";
+  return email.split("@")[0];
+}

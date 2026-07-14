@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { PrintButton } from "@/components/PrintButton";
+import { formatPetugas } from "@/lib/pengembalian";
 import { DEPARTEMEN } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -61,6 +62,15 @@ export default async function CetakKembaliPage({
 
   const dicetak = new Date().toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" });
 
+  const perDept = new Map<string, number>();
+  for (const r of rows) {
+    const key = r.pengembalian?.peserta?.departemen ?? "Tanpa Divisi";
+    perDept.set(key, (perDept.get(key) ?? 0) + 1);
+  }
+  const deptSummary = [...perDept.entries()].sort(
+    (a, b) => deptRank(a[0]) - deptRank(b[0])
+  );
+
   return (
     <main className="mx-auto max-w-6xl bg-white p-8 text-slate-900 print:p-0">
       <style>{"@media print { @page { size: A4 portrait; margin: 12mm; } }"}</style>
@@ -93,12 +103,12 @@ export default async function CetakKembaliPage({
         <colgroup>
           <col className="w-[5%]" />
           <col className="w-[9%]" />
-          <col className="w-[20%]" />
-          <col className="w-[9%]" />
-          <col className="w-[13%]" />
-          <col className="w-[10%]" />
-          <col className="w-[12%]" />
           <col className="w-[22%]" />
+          <col className="w-[9%]" />
+          <col className="w-[14%]" />
+          <col className="w-[9%]" />
+          <col className="w-[12%]" />
+          <col className="w-[20%]" />
         </colgroup>
         <thead>
           <tr className="border-y border-slate-300 bg-slate-50 text-left">
@@ -138,7 +148,7 @@ export default async function CetakKembaliPage({
                     <td className="px-1.5 py-1 break-words">{p?.jabatan_deskripsi ?? "-"}</td>
                     <td className="px-1.5 py-1 whitespace-nowrap">{r.kondisi}</td>
                     <td className="px-1.5 py-1 whitespace-nowrap">{r.pengembalian?.tanggal ?? "-"}</td>
-                    <td className="px-1.5 py-1 break-words">{r.pengembalian?.petugas ?? "-"}</td>
+                    <td className="px-1.5 py-1 whitespace-nowrap">{formatPetugas(r.pengembalian?.petugas)}</td>
                   </tr>
                 </Fragment>
               );
@@ -149,6 +159,21 @@ export default async function CetakKembaliPage({
               <td colSpan={8} className="px-1.5 py-8 text-center text-slate-400">Tidak ada data.</td>
             </tr>
           )}
+        </tbody>
+      </table>
+
+      <table className="mt-6 border-collapse text-xs" style={{ breakInside: "avoid" }}>
+        <tbody>
+          {deptSummary.map(([dName, count]) => (
+            <tr key={dName} className="border-b border-slate-100">
+              <td className="py-1 pr-8 text-slate-600">{dName}</td>
+              <td className="py-1 text-right font-medium tabular-nums">{count}</td>
+            </tr>
+          ))}
+          <tr className="border-t-2 border-slate-800">
+            <td className="py-1.5 pr-8 font-semibold">Total Kartu</td>
+            <td className="py-1.5 text-right font-bold tabular-nums">{rows.length}</td>
+          </tr>
         </tbody>
       </table>
     </main>

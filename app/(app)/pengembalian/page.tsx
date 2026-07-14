@@ -8,7 +8,7 @@ import { KondisiBadge } from "@/components/KondisiBadge";
 import { ExportPdfButton, type ExportPdfRow } from "@/components/ExportPdfButton";
 import { TarifCard } from "@/components/TarifCard";
 import { CatatPengembalianButton } from "@/components/CatatPengembalianModal";
-import { computeStatusPengembalian, formatRupiah } from "@/lib/pengembalian";
+import { computeStatusPengembalian, formatPetugas, formatRupiah } from "@/lib/pengembalian";
 import { APD_LABELS, DEPARTEMEN, type ApdItem } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
@@ -147,7 +147,7 @@ export default async function PengembalianPage({
       jabatan: p?.jabatan_deskripsi ?? "-",
       kondisi: r.kondisi,
       tanggal: r.pengembalian?.tanggal ?? "-",
-      petugas: r.pengembalian?.petugas ?? "-",
+      petugas: formatPetugas(r.pengembalian?.petugas),
     };
   });
 
