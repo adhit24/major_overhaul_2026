@@ -130,6 +130,11 @@ export default async function PengembalianPage({
   const filteredKartuRows = kartuRows.filter((r) => matchesSearch(r.pengembalian?.peserta));
   const filteredRugiRows = rugiRows.filter((r) => matchesSearch(r.pengembalian?.peserta));
 
+  const cetakParams = new URLSearchParams();
+  if (q) cetakParams.set("q", q);
+  if (dept) cetakParams.set("dept", dept);
+  const cetakKembaliHref = `/pengembalian/cetak/kembali${cetakParams.toString() ? `?${cetakParams.toString()}` : ""}`;
+
   return (
     <>
       <TopBar title="Pengembalian ID Card & APD" email={userData.user?.email} />
@@ -176,13 +181,18 @@ export default async function PengembalianPage({
 
         {filteredKartuRows.length > 0 && (
           <div id="daftar-kembali" className="card p-0 overflow-hidden scroll-mt-4">
-            <div className="px-5 py-4 border-b border-slate-100">
-              <h2 className="text-sm font-semibold text-slate-800">Daftar ID Card Dikembalikan</h2>
-              <p className="text-xs text-slate-400 mt-0.5">
-                {filteredKartuRows.length === kartuRows.length
-                  ? `${kartuRows.length} kartu sudah dikembalikan`
-                  : `${filteredKartuRows.length} dari ${kartuRows.length} kartu (sesuai pencarian)`}
-              </p>
+            <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-4 border-b border-slate-100">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-800">Daftar ID Card Dikembalikan</h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {filteredKartuRows.length === kartuRows.length
+                    ? `${kartuRows.length} kartu sudah dikembalikan`
+                    : `${filteredKartuRows.length} dari ${kartuRows.length} kartu (sesuai pencarian)`}
+                </p>
+              </div>
+              <Link href={cetakKembaliHref} className="rounded-md px-2 py-1 text-xs font-medium text-brand-600 hover:bg-brand-50 hover:underline">
+                Cetak Daftar
+              </Link>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
