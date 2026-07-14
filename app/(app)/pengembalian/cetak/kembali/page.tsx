@@ -89,7 +89,17 @@ export default async function CetakKembaliPage({
         </p>
       </div>
 
-      <table className="mt-4 w-full border-collapse text-[11px]">
+      <table className="mt-4 w-full table-fixed border-collapse text-[11px]">
+        <colgroup>
+          <col className="w-[5%]" />
+          <col className="w-[9%]" />
+          <col className="w-[20%]" />
+          <col className="w-[9%]" />
+          <col className="w-[13%]" />
+          <col className="w-[10%]" />
+          <col className="w-[12%]" />
+          <col className="w-[22%]" />
+        </colgroup>
         <thead>
           <tr className="border-y border-slate-300 bg-slate-50 text-left">
             <th className="px-1.5 py-2">No</th>
@@ -98,7 +108,7 @@ export default async function CetakKembaliPage({
             <th className="px-1.5 py-2">PIN</th>
             <th className="px-1.5 py-2">Jabatan</th>
             <th className="px-1.5 py-2">Kondisi</th>
-            <th className="px-1.5 py-2">Tgl Kembali</th>
+            <th className="px-1.5 py-2 whitespace-nowrap">Tgl Kembali</th>
             <th className="px-1.5 py-2">Petugas</th>
           </tr>
         </thead>
@@ -121,14 +131,14 @@ export default async function CetakKembaliPage({
                     </tr>
                   )}
                   <tr className="border-b border-slate-200" style={{ breakInside: "avoid" }}>
-                    <td className="px-1.5 py-1">{no}</td>
-                    <td className="px-1.5 py-1">{p?.no_badge ?? "-"}</td>
-                    <td className="px-1.5 py-1">{p?.nama ?? "-"}</td>
-                    <td className="px-1.5 py-1">{p?.no_erp ?? "-"}</td>
-                    <td className="px-1.5 py-1">{p?.jabatan_deskripsi ?? "-"}</td>
-                    <td className="px-1.5 py-1">{r.kondisi}</td>
-                    <td className="px-1.5 py-1">{r.pengembalian?.tanggal ?? "-"}</td>
-                    <td className="px-1.5 py-1">{r.pengembalian?.petugas ?? "-"}</td>
+                    <td className="px-1.5 py-1 whitespace-nowrap">{no}</td>
+                    <td className="px-1.5 py-1 whitespace-nowrap">{p?.no_badge ?? "-"}</td>
+                    <td className="px-1.5 py-1 break-words">{p?.nama ?? "-"}</td>
+                    <td className="px-1.5 py-1 whitespace-nowrap">{p?.no_erp ?? "-"}</td>
+                    <td className="px-1.5 py-1 break-words">{p?.jabatan_deskripsi ?? "-"}</td>
+                    <td className="px-1.5 py-1 whitespace-nowrap">{r.kondisi}</td>
+                    <td className="px-1.5 py-1 whitespace-nowrap">{r.pengembalian?.tanggal ?? "-"}</td>
+                    <td className="px-1.5 py-1 break-words">{r.pengembalian?.petugas ?? "-"}</td>
                   </tr>
                 </Fragment>
               );
