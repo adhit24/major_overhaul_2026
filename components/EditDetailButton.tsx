@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { updatePengembalianDetail } from "@/app/(app)/pengembalian/actions";
+import { updatePengembalianDetail, batalkanPengembalianDetail } from "@/app/(app)/pengembalian/actions";
 import { KONDISI_ITEM, APD_LABELS, type ApdItem } from "@/lib/constants";
+
+const BATALKAN = "__BATALKAN__";
 
 type Props = {
   detailId: number;
@@ -19,8 +21,10 @@ export function EditDetailButton({ detailId, pesertaId, item, kondisiAwal, poton
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [kondisi, setKondisi] = useState(kondisiAwal);
+  const [kondisi, setKondisi] = useState<string>(kondisiAwal);
   const [potongan, setPotongan] = useState(potonganAwal);
+
+  const isBatalkan = kondisi === BATALKAN;
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -28,10 +32,15 @@ export function EditDetailButton({ detailId, pesertaId, item, kondisiAwal, poton
     fd.set("detail_id", String(detailId));
     fd.set("peserta_id", String(pesertaId));
     fd.set("item", item);
-    fd.set("kondisi", kondisi);
-    fd.set("potongan", String(potongan));
+    if (!isBatalkan) {
+      fd.set("kondisi", kondisi);
+      fd.set("potongan", String(potongan));
+    }
+
     startTransition(async () => {
-      const res = await updatePengembalianDetail(fd);
+      const res = isBatalkan
+        ? await batalkanPengembalianDetail(fd)
+        : await updatePengembalianDetail(fd);
       if (res.error) setError(res.error);
       else {
         setOpen(false);
@@ -65,6 +74,9 @@ export function EditDetailButton({ detailId, pesertaId, item, kondisiAwal, poton
                   {KONDISI_ITEM.map((k) => (
                     <option key={k} value={k}>{k}</option>
                   ))}
+                  <option value={BATALKAN}>
+                    {item === "KARTU" ? "AKTIFKAN KEMBALI (batalkan pengembalian)" : "BATALKAN (hapus catatan ini)"}
+                  </option>
                 </select>
               </label>
               {(kondisi === "HILANG" || kondisi === "RUSAK") && (
@@ -80,13 +92,24 @@ export function EditDetailButton({ detailId, pesertaId, item, kondisiAwal, poton
                   />
                 </label>
               )}
+              {isBatalkan && (
+                <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                  {item === "KARTU"
+                    ? "Catatan pengembalian ID Card ini akan dihapus dan status badge dikembalikan ke ACTIVE. Pakai ini kalau ternyata datanya salah (kartu belum benar-benar dikembalikan)."
+                    : "Catatan pengembalian item ini akan dihapus."}
+                </p>
+              )}
               {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
               <div className="flex justify-end gap-2 pt-1">
                 <button type="button" onClick={() => setOpen(false)} className="btn-ghost">
                   Batal
                 </button>
-                <button type="submit" disabled={isPending} className="btn-primary text-sm">
-                  {isPending ? "Menyimpan..." : "Simpan"}
+                <button
+                  type="submit"
+                  disabled={isPending}
+                  className={isBatalkan ? "rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60" : "btn-primary text-sm"}
+                >
+                  {isPending ? "Menyimpan..." : isBatalkan ? "Aktifkan Kembali" : "Simpan"}
                 </button>
               </div>
             </form>

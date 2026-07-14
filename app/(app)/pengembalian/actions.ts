@@ -108,6 +108,41 @@ export async function updatePengembalianDetail(formData: FormData) {
   return { ok: true };
 }
 
+export async function batalkanPengembalianDetail(formData: FormData) {
+  const detailId = Number(formData.get("detail_id"));
+  const pesertaId = Number(formData.get("peserta_id"));
+  const item = String(formData.get("item") ?? "");
+  if (!detailId || !pesertaId) return { error: "Data tidak valid." };
+
+  const supabase = await createClient();
+
+  const { data: detailRow } = await supabase
+    .from("pengembalian_detail")
+    .select("id, pengembalian_id")
+    .eq("id", detailId)
+    .single();
+  if (!detailRow) return { error: "Data pengembalian tidak ditemukan." };
+
+  const { error: delErr } = await supabase.from("pengembalian_detail").delete().eq("id", detailId);
+  if (delErr) return { error: delErr.message };
+
+  // kejadian yang jadi kosong (semua item-nya dibatalkan) ikut dibersihkan
+  const { data: sisaDetail } = await supabase
+    .from("pengembalian_detail")
+    .select("id")
+    .eq("pengembalian_id", detailRow.pengembalian_id);
+  if (!sisaDetail || sisaDetail.length === 0) {
+    await supabase.from("pengembalian").delete().eq("id", detailRow.pengembalian_id);
+  }
+
+  if (item === "KARTU") {
+    await supabase.from("peserta").update({ status_badge: "ACTIVE" }).eq("id", pesertaId);
+  }
+
+  revalidateAll();
+  return { ok: true };
+}
+
 export async function hapusPengembalian(formData: FormData) {
   const pengembalianId = Number(formData.get("pengembalian_id"));
   const pesertaId = Number(formData.get("peserta_id"));
