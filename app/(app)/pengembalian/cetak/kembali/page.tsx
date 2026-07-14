@@ -40,6 +40,11 @@ export default async function CetakKembaliPage({
     return i === -1 ? DEPARTEMEN.length : i;
   };
 
+  const badgeNum = (badge: string | null | undefined) => {
+    const n = Number(badge);
+    return Number.isFinite(n) && badge ? n : Infinity;
+  };
+
   const qLower = (q ?? "").toLowerCase();
   const rows = ((data ?? []) as unknown as Row[])
     .filter((r) => {
@@ -51,14 +56,14 @@ export default async function CetakKembaliPage({
     })
     .sort((a, b) =>
       deptRank(a.pengembalian?.peserta?.departemen) - deptRank(b.pengembalian?.peserta?.departemen) ||
-      (a.pengembalian?.peserta?.nama ?? "").localeCompare(b.pengembalian?.peserta?.nama ?? "")
+      badgeNum(a.pengembalian?.peserta?.no_badge) - badgeNum(b.pengembalian?.peserta?.no_badge)
     );
 
   const dicetak = new Date().toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" });
 
   return (
     <main className="mx-auto max-w-6xl bg-white p-8 text-slate-900 print:p-0">
-      <style>{"@media print { @page { size: A4 landscape; margin: 12mm; } }"}</style>
+      <style>{"@media print { @page { size: A4 portrait; margin: 12mm; } }"}</style>
 
       <div className="mb-4 flex justify-end print:hidden">
         <PrintButton />
@@ -84,18 +89,17 @@ export default async function CetakKembaliPage({
         </p>
       </div>
 
-      <table className="mt-4 w-full border-collapse text-xs">
+      <table className="mt-4 w-full border-collapse text-[11px]">
         <thead>
           <tr className="border-y border-slate-300 bg-slate-50 text-left">
-            <th className="px-2 py-2">No</th>
-            <th className="px-2 py-2">No Badge</th>
-            <th className="px-2 py-2">Nama</th>
-            <th className="px-2 py-2">PIN</th>
-            <th className="px-2 py-2">Divisi</th>
-            <th className="px-2 py-2">Jabatan</th>
-            <th className="px-2 py-2">Kondisi</th>
-            <th className="px-2 py-2">Tanggal Kembali</th>
-            <th className="px-2 py-2">Petugas</th>
+            <th className="px-1.5 py-2">No</th>
+            <th className="px-1.5 py-2">Badge</th>
+            <th className="px-1.5 py-2">Nama</th>
+            <th className="px-1.5 py-2">PIN</th>
+            <th className="px-1.5 py-2">Jabatan</th>
+            <th className="px-1.5 py-2">Kondisi</th>
+            <th className="px-1.5 py-2">Tgl Kembali</th>
+            <th className="px-1.5 py-2">Petugas</th>
           </tr>
         </thead>
         <tbody>
@@ -111,21 +115,20 @@ export default async function CetakKembaliPage({
                 <Fragment key={i}>
                   {showGroup && (
                     <tr className="bg-slate-100">
-                      <td colSpan={9} className="px-2 py-1.5 font-semibold uppercase tracking-wide">
+                      <td colSpan={8} className="px-1.5 py-1.5 font-semibold uppercase tracking-wide">
                         {p?.departemen ?? "Tanpa Divisi"}
                       </td>
                     </tr>
                   )}
                   <tr className="border-b border-slate-200" style={{ breakInside: "avoid" }}>
-                    <td className="px-2 py-1.5">{no}</td>
-                    <td className="px-2 py-1.5">{p?.no_badge ?? "-"}</td>
-                    <td className="px-2 py-1.5">{p?.nama ?? "-"}</td>
-                    <td className="px-2 py-1.5">{p?.no_erp ?? "-"}</td>
-                    <td className="px-2 py-1.5">{p?.departemen ?? "-"}</td>
-                    <td className="px-2 py-1.5">{p?.jabatan_deskripsi ?? "-"}</td>
-                    <td className="px-2 py-1.5">{r.kondisi}</td>
-                    <td className="px-2 py-1.5">{r.pengembalian?.tanggal ?? "-"}</td>
-                    <td className="px-2 py-1.5">{r.pengembalian?.petugas ?? "-"}</td>
+                    <td className="px-1.5 py-1">{no}</td>
+                    <td className="px-1.5 py-1">{p?.no_badge ?? "-"}</td>
+                    <td className="px-1.5 py-1">{p?.nama ?? "-"}</td>
+                    <td className="px-1.5 py-1">{p?.no_erp ?? "-"}</td>
+                    <td className="px-1.5 py-1">{p?.jabatan_deskripsi ?? "-"}</td>
+                    <td className="px-1.5 py-1">{r.kondisi}</td>
+                    <td className="px-1.5 py-1">{r.pengembalian?.tanggal ?? "-"}</td>
+                    <td className="px-1.5 py-1">{r.pengembalian?.petugas ?? "-"}</td>
                   </tr>
                 </Fragment>
               );
@@ -133,7 +136,7 @@ export default async function CetakKembaliPage({
           })()}
           {rows.length === 0 && (
             <tr>
-              <td colSpan={9} className="px-2 py-8 text-center text-slate-400">Tidak ada data.</td>
+              <td colSpan={8} className="px-1.5 py-8 text-center text-slate-400">Tidak ada data.</td>
             </tr>
           )}
         </tbody>
