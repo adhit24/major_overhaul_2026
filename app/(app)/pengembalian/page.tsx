@@ -5,6 +5,7 @@ import { TopBar } from "@/components/TopBar";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { KondisiBadge } from "@/components/KondisiBadge";
+import { ExportPdfButton, type ExportPdfRow } from "@/components/ExportPdfButton";
 import { TarifCard } from "@/components/TarifCard";
 import { CatatPengembalianButton } from "@/components/CatatPengembalianModal";
 import { computeStatusPengembalian, formatRupiah } from "@/lib/pengembalian";
@@ -135,6 +136,21 @@ export default async function PengembalianPage({
   const filteredKartuRows = kartuRows.filter((r) => matchesSearch(r.pengembalian?.peserta));
   const filteredRugiRows = rugiRows.filter((r) => matchesSearch(r.pengembalian?.peserta));
 
+  const exportKartuRows: ExportPdfRow[] = filteredKartuRows.map((r, i) => {
+    const p = r.pengembalian?.peserta;
+    return {
+      no: i + 1,
+      badge: p?.no_badge ?? "-",
+      nama: p?.nama ?? "-",
+      pin: p?.no_erp ?? "-",
+      departemen: p?.departemen ?? "Tanpa Divisi",
+      jabatan: p?.jabatan_deskripsi ?? "-",
+      kondisi: r.kondisi,
+      tanggal: r.pengembalian?.tanggal ?? "-",
+      petugas: r.pengembalian?.petugas ?? "-",
+    };
+  });
+
   const cetakParams = new URLSearchParams();
   if (q) cetakParams.set("q", q);
   if (dept) cetakParams.set("dept", dept);
@@ -195,9 +211,17 @@ export default async function PengembalianPage({
                     : `${filteredKartuRows.length} dari ${kartuRows.length} kartu (sesuai pencarian)`}
                 </p>
               </div>
-              <Link href={cetakKembaliHref} className="rounded-md px-2 py-1 text-xs font-medium text-brand-600 hover:bg-brand-50 hover:underline">
-                Cetak Daftar
-              </Link>
+              <div className="flex items-center gap-1">
+                <Link href={cetakKembaliHref} className="rounded-md px-2 py-1 text-xs font-medium text-brand-600 hover:bg-brand-50 hover:underline">
+                  Cetak Daftar
+                </Link>
+                <ExportPdfButton
+                  title="DAFTAR ID CARD DIKEMBALIKAN"
+                  subtitle="Pengembalian ID Card & APD — MOH PLTU Cirebon 1"
+                  rows={exportKartuRows}
+                  filename={`daftar-id-card-dikembalikan-${new Date().toISOString().slice(0, 10)}.pdf`}
+                />
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
