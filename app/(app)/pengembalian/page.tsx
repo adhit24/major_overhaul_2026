@@ -64,12 +64,17 @@ export default async function PengembalianPage({
     const i = DEPARTEMEN.indexOf((d ?? "") as (typeof DEPARTEMEN)[number]);
     return i === -1 ? DEPARTEMEN.length : i;
   };
+  // Di dalam satu divisi, urutkan no badge kecil -> besar (bukan alfabetis nama).
+  const badgeNum = (badge: string | null | undefined) => {
+    const n = Number(badge);
+    return Number.isFinite(n) && badge ? n : Infinity;
+  };
 
   const rugiRows = ((rugiRes.data ?? []) as unknown as RugiRow[])
     .slice()
     .sort((a, b) =>
       deptRank(a.pengembalian?.peserta?.departemen) - deptRank(b.pengembalian?.peserta?.departemen) ||
-      (a.pengembalian?.peserta?.nama ?? "").localeCompare(b.pengembalian?.peserta?.nama ?? "")
+      badgeNum(a.pengembalian?.peserta?.no_badge) - badgeNum(b.pengembalian?.peserta?.no_badge)
     );
 
   type KartuRow = {
@@ -82,7 +87,7 @@ export default async function PengembalianPage({
     .slice()
     .sort((a, b) =>
       deptRank(a.pengembalian?.peserta?.departemen) - deptRank(b.pengembalian?.peserta?.departemen) ||
-      (a.pengembalian?.peserta?.nama ?? "").localeCompare(b.pengembalian?.peserta?.nama ?? "")
+      badgeNum(a.pengembalian?.peserta?.no_badge) - badgeNum(b.pengembalian?.peserta?.no_badge)
     );
 
   // agregasi per peserta
@@ -117,7 +122,7 @@ export default async function PengembalianPage({
     return true;
   });
 
-  filtered.sort((a, b) => deptRank(a.departemen) - deptRank(b.departemen) || a.nama.localeCompare(b.nama));
+  filtered.sort((a, b) => deptRank(a.departemen) - deptRank(b.departemen) || badgeNum(a.no_badge) - badgeNum(b.no_badge));
 
   // Pencarian (nama/badge/PIN) & filter divisi juga diterapkan ke daftar kembali & kehilangan,
   // bukan cuma ke tabel checklist utama, supaya satu kotak cari bisa dipakai untuk ketiganya.
