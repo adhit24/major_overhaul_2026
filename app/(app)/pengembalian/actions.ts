@@ -63,14 +63,19 @@ export async function catatPengembalian(formData: FormData) {
     departemen: peserta.departemen,
   };
   if (items.some((i) => i.item === "KARTU")) {
-    const { data: maxRow } = await supabase
+    // .eq("departemen", null) serializes as a literal equality (matches nothing), not an
+    // IS NULL check - peserta tanpa departemen butuh .is() supaya lookup MAX(urutan)-nya
+    // tetap benar dan tidak selalu jatuh ke 1 (yang akan bikin urutan dobel diam-diam).
+    let maxQuery = supabase
       .from("pengembalian")
       .select("urutan")
-      .eq("departemen", peserta.departemen)
       .not("urutan", "is", null)
       .order("urutan", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .limit(1);
+    maxQuery = peserta.departemen
+      ? maxQuery.eq("departemen", peserta.departemen)
+      : maxQuery.is("departemen", null);
+    const { data: maxRow } = await maxQuery.maybeSingle();
     batchFields = { batch: 2, urutan: (maxRow?.urutan ?? 0) + 1, departemen: peserta.departemen };
   }
 
