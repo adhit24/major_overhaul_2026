@@ -35,7 +35,7 @@ export async function catatPengembalian(formData: FormData) {
   const supabase = await createClient();
 
   const { data: peserta, error: pesertaErr } = await supabase
-    .from("peserta").select("id, status_badge").eq("id", pesertaId).single();
+    .from("peserta").select("id, status_badge, departemen").eq("id", pesertaId).single();
   if (pesertaErr || !peserta) return { error: "Peserta tidak ditemukan." };
 
   // item yang sudah pernah tercatat utk peserta ini (lintas kejadian)
@@ -55,19 +55,23 @@ export async function catatPengembalian(formData: FormData) {
   const { data: userData } = await supabase.auth.getUser();
   const petugas = userData.user?.email ?? null;
 
-  // Batch 1 (161 orang pertama) dikunci sebagai arsip; setiap pengembalian KARTU baru sejak
-  // saat ini otomatis masuk batch 2 dan penomoran "urutan" berlanjut dari yang terakhir
-  // (tidak mengulang dari 1), supaya daftar cetak lama tidak berubah nomornya.
-  let batchFields: { batch: number; urutan: number } | Record<string, never> = {};
+  // Batch 1 (data terkunci per 15 Jul 2026) tidak pernah di-renumber lagi. Setiap pengembalian
+  // KARTU baru sejak sekarang otomatis masuk batch 2 dan penomoran "urutan" berlanjut dari yang
+  // terakhir DALAM DEPARTEMEN PESERTA ITU SAJA (bukan lintas departemen), supaya laporan per
+  // divisi tetap bernomor rapi 1..N sendiri-sendiri.
+  let batchFields: { batch: number; urutan: number; departemen: string | null } | { departemen: string | null } = {
+    departemen: peserta.departemen,
+  };
   if (items.some((i) => i.item === "KARTU")) {
     const { data: maxRow } = await supabase
       .from("pengembalian")
       .select("urutan")
+      .eq("departemen", peserta.departemen)
       .not("urutan", "is", null)
       .order("urutan", { ascending: false })
       .limit(1)
       .maybeSingle();
-    batchFields = { batch: 2, urutan: (maxRow?.urutan ?? 0) + 1 };
+    batchFields = { batch: 2, urutan: (maxRow?.urutan ?? 0) + 1, departemen: peserta.departemen };
   }
 
   const { data: kejadian, error: insErr } = await supabase
