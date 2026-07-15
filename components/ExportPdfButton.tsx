@@ -7,7 +7,7 @@ export type ExportPdfRow = {
   badge: string;
   nama: string;
   pin: string;
-  departemen: string;
+  groupLabel: string;
   jabatan: string;
   kondisi: string;
   tanggal: string;
@@ -44,11 +44,11 @@ export function ExportPdfButton({ title, subtitle, rows, filename }: Props) {
       doc.text(`Dicetak: ${dicetak} · Total: ${rows.length}`, 14, 25);
 
       const body: (string | number)[][] = [];
-      let lastDept = "";
+      let lastGroup = "";
       for (const r of rows) {
-        if (r.departemen !== lastDept) {
-          lastDept = r.departemen;
-          body.push([{ content: lastDept || "Tanpa Divisi", colSpan: 8 } as unknown as string]);
+        if (r.groupLabel !== lastGroup) {
+          lastGroup = r.groupLabel;
+          body.push([{ content: lastGroup || "-", colSpan: 8 } as unknown as string]);
         }
         body.push([r.no, r.badge, r.nama, r.pin, r.jabatan, r.kondisi, r.tanggal, r.petugas]);
       }

@@ -46,7 +46,7 @@ export default async function PengembalianPage({
       .order("potongan", { ascending: false }),
     supabase
       .from("pengembalian_detail")
-      .select("kondisi, potongan, pengembalian(id, tanggal, petugas, is_migrasi, peserta(id, nama, no_badge, no_erp, departemen, jabatan_deskripsi))")
+      .select("kondisi, potongan, pengembalian(id, tanggal, petugas, is_migrasi, batch, urutan, peserta(id, nama, no_badge, no_erp, departemen, jabatan_deskripsi))")
       .eq("item", "KARTU")
       .neq("kondisi", "HILANG"),
   ]);
@@ -70,6 +70,8 @@ export default async function PengembalianPage({
     const n = Number(badge);
     return Number.isFinite(n) && badge ? n : Infinity;
   };
+  const batchLabel = (b: number | null | undefined) =>
+    b === 1 ? "Batch 1 (dikunci)" : b === 2 ? "Batch 2 — mulai 18 Juli 2026" : `Batch ${b ?? "-"}`;
 
   const rugiRows = ((rugiRes.data ?? []) as unknown as RugiRow[])
     .slice()
@@ -81,15 +83,16 @@ export default async function PengembalianPage({
   type KartuRow = {
     kondisi: string; potongan: number;
     pengembalian: { id: number; tanggal: string; petugas: string | null; is_migrasi: boolean;
+      batch: number | null; urutan: number | null;
       peserta: { id: number; nama: string; no_badge: string | null; no_erp: string | null;
         departemen: string | null; jabatan_deskripsi: string | null } | null } | null;
   };
+  // Batch 1 (161 orang) dikunci - urutannya sudah permanen. Pengembalian baru (batch 2, mulai
+  // 18 Jul 2026) ditambahkan di bawahnya dengan nomor lanjut (162, dst), bukan diacak ulang
+  // per divisi, supaya daftar cetak batch 1 tidak pernah berubah.
   const kartuRows = ((kartuRes.data ?? []) as unknown as KartuRow[])
     .slice()
-    .sort((a, b) =>
-      deptRank(a.pengembalian?.peserta?.departemen) - deptRank(b.pengembalian?.peserta?.departemen) ||
-      badgeNum(a.pengembalian?.peserta?.no_badge) - badgeNum(b.pengembalian?.peserta?.no_badge)
-    );
+    .sort((a, b) => (a.pengembalian?.urutan ?? Infinity) - (b.pengembalian?.urutan ?? Infinity));
 
   // agregasi per peserta
   const itemsByPeserta = new Map<number, string[]>();
@@ -136,14 +139,14 @@ export default async function PengembalianPage({
   const filteredKartuRows = kartuRows.filter((r) => matchesSearch(r.pengembalian?.peserta));
   const filteredRugiRows = rugiRows.filter((r) => matchesSearch(r.pengembalian?.peserta));
 
-  const exportKartuRows: ExportPdfRow[] = filteredKartuRows.map((r, i) => {
+  const exportKartuRows: ExportPdfRow[] = filteredKartuRows.map((r) => {
     const p = r.pengembalian?.peserta;
     return {
-      no: i + 1,
+      no: r.pengembalian?.urutan ?? 0,
       badge: p?.no_badge ?? "-",
       nama: p?.nama ?? "-",
       pin: p?.no_erp ?? "-",
-      departemen: p?.departemen ?? "Tanpa Divisi",
+      groupLabel: batchLabel(r.pengembalian?.batch),
       jabatan: p?.jabatan_deskripsi ?? "-",
       kondisi: r.kondisi,
       tanggal: r.pengembalian?.tanggal ?? "-",
@@ -227,7 +230,8 @@ export default async function PengembalianPage({
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-                    <th className="px-5 py-3">No Badge</th>
+                    <th className="px-5 py-3">No</th>
+                    <th className="px-4 py-3">No Badge</th>
                     <th className="px-4 py-3">Nama</th>
                     <th className="px-4 py-3">PIN</th>
                     <th className="px-4 py-3">Divisi</th>
@@ -239,22 +243,24 @@ export default async function PengembalianPage({
                 </thead>
                 <tbody>
                   {(() => {
-                    let lastDept: string | null | undefined = undefined;
+                    let lastBatch: number | null | undefined = undefined;
                     return filteredKartuRows.map((r, i) => {
                       const p = r.pengembalian?.peserta;
-                      const showGroup = p?.departemen !== lastDept;
-                      lastDept = p?.departemen;
+                      const b = r.pengembalian?.batch ?? null;
+                      const showGroup = b !== lastBatch;
+                      lastBatch = b;
                       return (
                         <Fragment key={`${r.pengembalian?.id}-${i}`}>
                           {showGroup && (
                             <tr className="bg-slate-50/80">
-                              <td colSpan={8} className="px-5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                                {p?.departemen ?? "Tanpa Divisi"}
+                              <td colSpan={9} className="px-5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                {batchLabel(b)}
                               </td>
                             </tr>
                           )}
                           <tr className="border-b border-slate-50">
-                            <td className="px-5 py-2.5 tabular-nums">{p?.no_badge ?? "-"}</td>
+                            <td className="px-5 py-2.5 tabular-nums text-slate-500">{r.pengembalian?.urutan ?? "-"}</td>
+                            <td className="px-4 py-2.5 tabular-nums">{p?.no_badge ?? "-"}</td>
                             <td className="px-4 py-2.5 font-medium text-slate-800">
                               {p ? <Link href={`/pengembalian/${p.id}`} className="hover:text-brand-600 hover:underline">{p.nama}</Link> : "-"}
                             </td>

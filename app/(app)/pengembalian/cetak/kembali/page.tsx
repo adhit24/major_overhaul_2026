@@ -11,6 +11,8 @@ type Row = {
   pengembalian: {
     tanggal: string;
     petugas: string | null;
+    batch: number | null;
+    urutan: number | null;
     peserta: {
       id: number;
       nama: string;
@@ -32,7 +34,7 @@ export default async function CetakKembaliPage({
 
   const { data } = await supabase
     .from("pengembalian_detail")
-    .select("kondisi, pengembalian(tanggal, petugas, peserta(id, nama, no_badge, no_erp, departemen, jabatan_deskripsi))")
+    .select("kondisi, pengembalian(tanggal, petugas, batch, urutan, peserta(id, nama, no_badge, no_erp, departemen, jabatan_deskripsi))")
     .eq("item", "KARTU")
     .neq("kondisi", "HILANG");
 
@@ -41,12 +43,12 @@ export default async function CetakKembaliPage({
     return i === -1 ? DEPARTEMEN.length : i;
   };
 
-  const badgeNum = (badge: string | null | undefined) => {
-    const n = Number(badge);
-    return Number.isFinite(n) && badge ? n : Infinity;
-  };
+  const batchLabel = (b: number | null | undefined) =>
+    b === 1 ? "Batch 1 (dikunci)" : b === 2 ? "Batch 2 — mulai 18 Juli 2026" : `Batch ${b ?? "-"}`;
 
   const qLower = (q ?? "").toLowerCase();
+  // Batch 1 dikunci - urutan (No) permanen mengikuti kolom `urutan`, bukan dihitung ulang
+  // per render, supaya daftar cetak lama tidak pernah berubah nomornya walau ada data baru.
   const rows = ((data ?? []) as unknown as Row[])
     .filter((r) => {
       const p = r.pengembalian?.peserta;
@@ -55,21 +57,22 @@ export default async function CetakKembaliPage({
       if (qLower && !(`${p.nama} ${p.no_badge ?? ""} ${p.no_erp ?? ""}`.toLowerCase().includes(qLower))) return false;
       return true;
     })
-    .sort((a, b) =>
-      deptRank(a.pengembalian?.peserta?.departemen) - deptRank(b.pengembalian?.peserta?.departemen) ||
-      badgeNum(a.pengembalian?.peserta?.no_badge) - badgeNum(b.pengembalian?.peserta?.no_badge)
-    );
+    .sort((a, b) => (a.pengembalian?.urutan ?? Infinity) - (b.pengembalian?.urutan ?? Infinity));
 
   const dicetak = new Date().toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" });
 
   const perDept = new Map<string, number>();
+  const perBatch = new Map<number, number>();
   for (const r of rows) {
     const key = r.pengembalian?.peserta?.departemen ?? "Tanpa Divisi";
     perDept.set(key, (perDept.get(key) ?? 0) + 1);
+    const b = r.pengembalian?.batch ?? 0;
+    perBatch.set(b, (perBatch.get(b) ?? 0) + 1);
   }
   const deptSummary = [...perDept.entries()].sort(
     (a, b) => deptRank(a[0]) - deptRank(b[0])
   );
+  const batchSummary = [...perBatch.entries()].sort((a, b) => a[0] - b[0]);
 
   return (
     <main className="mx-auto max-w-6xl bg-white p-8 text-slate-900 print:p-0">
@@ -124,24 +127,23 @@ export default async function CetakKembaliPage({
         </thead>
         <tbody>
           {(() => {
-            let lastDept: string | null | undefined = undefined;
-            let no = 0;
+            let lastBatch: number | null | undefined = undefined;
             return rows.map((r, i) => {
               const p = r.pengembalian?.peserta;
-              const showGroup = p?.departemen !== lastDept;
-              lastDept = p?.departemen;
-              no += 1;
+              const b = r.pengembalian?.batch ?? null;
+              const showGroup = b !== lastBatch;
+              lastBatch = b;
               return (
                 <Fragment key={i}>
                   {showGroup && (
                     <tr className="bg-slate-100">
                       <td colSpan={8} className="px-1.5 py-1.5 font-semibold uppercase tracking-wide">
-                        {p?.departemen ?? "Tanpa Divisi"}
+                        {batchLabel(b)}
                       </td>
                     </tr>
                   )}
                   <tr className="border-b border-slate-200" style={{ breakInside: "avoid" }}>
-                    <td className="px-1.5 py-1 whitespace-nowrap">{no}</td>
+                    <td className="px-1.5 py-1 whitespace-nowrap">{r.pengembalian?.urutan ?? "-"}</td>
                     <td className="px-1.5 py-1 whitespace-nowrap">{p?.no_badge ?? "-"}</td>
                     <td className="px-1.5 py-1 break-words">{p?.nama ?? "-"}</td>
                     <td className="px-1.5 py-1 whitespace-nowrap">{p?.no_erp ?? "-"}</td>
@@ -162,20 +164,33 @@ export default async function CetakKembaliPage({
         </tbody>
       </table>
 
-      <table className="mt-6 border-collapse text-xs" style={{ breakInside: "avoid" }}>
-        <tbody>
-          {deptSummary.map(([dName, count]) => (
-            <tr key={dName} className="border-b border-slate-100">
-              <td className="py-1 pr-8 text-slate-600">{dName}</td>
-              <td className="py-1 text-right font-medium tabular-nums">{count}</td>
+      <div className="mt-6 flex flex-wrap gap-x-16 gap-y-4" style={{ breakInside: "avoid" }}>
+        <table className="border-collapse text-xs">
+          <tbody>
+            {deptSummary.map(([dName, count]) => (
+              <tr key={dName} className="border-b border-slate-100">
+                <td className="py-1 pr-8 text-slate-600">{dName}</td>
+                <td className="py-1 text-right font-medium tabular-nums">{count}</td>
+              </tr>
+            ))}
+            <tr className="border-t-2 border-slate-800">
+              <td className="py-1.5 pr-8 font-semibold">Total Kartu</td>
+              <td className="py-1.5 text-right font-bold tabular-nums">{rows.length}</td>
             </tr>
-          ))}
-          <tr className="border-t-2 border-slate-800">
-            <td className="py-1.5 pr-8 font-semibold">Total Kartu</td>
-            <td className="py-1.5 text-right font-bold tabular-nums">{rows.length}</td>
-          </tr>
-        </tbody>
-      </table>
+          </tbody>
+        </table>
+
+        <table className="border-collapse text-xs">
+          <tbody>
+            {batchSummary.map(([b, count]) => (
+              <tr key={b} className="border-b border-slate-100">
+                <td className="py-1 pr-8 text-slate-600">{batchLabel(b)}</td>
+                <td className="py-1 text-right font-medium tabular-nums">{count}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </main>
   );
 }

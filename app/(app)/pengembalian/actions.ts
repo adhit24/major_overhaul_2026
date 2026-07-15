@@ -55,9 +55,24 @@ export async function catatPengembalian(formData: FormData) {
   const { data: userData } = await supabase.auth.getUser();
   const petugas = userData.user?.email ?? null;
 
+  // Batch 1 (161 orang pertama) dikunci sebagai arsip; setiap pengembalian KARTU baru sejak
+  // saat ini otomatis masuk batch 2 dan penomoran "urutan" berlanjut dari yang terakhir
+  // (tidak mengulang dari 1), supaya daftar cetak lama tidak berubah nomornya.
+  let batchFields: { batch: number; urutan: number } | Record<string, never> = {};
+  if (items.some((i) => i.item === "KARTU")) {
+    const { data: maxRow } = await supabase
+      .from("pengembalian")
+      .select("urutan")
+      .not("urutan", "is", null)
+      .order("urutan", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    batchFields = { batch: 2, urutan: (maxRow?.urutan ?? 0) + 1 };
+  }
+
   const { data: kejadian, error: insErr } = await supabase
     .from("pengembalian")
-    .insert({ peserta_id: pesertaId, tanggal, catatan, petugas })
+    .insert({ peserta_id: pesertaId, tanggal, catatan, petugas, ...batchFields })
     .select("id")
     .single();
   if (insErr || !kejadian) return { error: insErr?.message ?? "Gagal menyimpan kejadian." };
@@ -131,8 +146,13 @@ export async function batalkanPengembalianDetail(formData: FormData) {
     .from("pengembalian_detail")
     .select("id")
     .eq("pengembalian_id", detailRow.pengembalian_id);
-  if (!sisaDetail || sisaDetail.length === 0) {
+  const kejadianKosong = !sisaDetail || sisaDetail.length === 0;
+  if (kejadianKosong) {
     await supabase.from("pengembalian").delete().eq("id", detailRow.pengembalian_id);
+  } else if (item === "KARTU") {
+    // kejadian masih punya item lain (mis. HELM) - lepas slot nomor urut KARTU-nya,
+    // kejadian & item lainnya tetap aman
+    await supabase.from("pengembalian").update({ urutan: null }).eq("id", detailRow.pengembalian_id);
   }
 
   if (item === "KARTU") {
