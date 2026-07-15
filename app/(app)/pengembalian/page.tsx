@@ -87,12 +87,15 @@ export default async function PengembalianPage({
       peserta: { id: number; nama: string; no_badge: string | null; no_erp: string | null;
         departemen: string | null; jabatan_deskripsi: string | null } | null } | null;
   };
-  // Batch 1 (161 orang) dikunci - urutannya sudah permanen. Pengembalian baru (batch 2, mulai
-  // 18 Jul 2026) ditambahkan di bawahnya dengan nomor lanjut (162, dst), bukan diacak ulang
-  // per divisi, supaya daftar cetak batch 1 tidak pernah berubah.
+  // urutan sekarang per-departemen (lihat migrasi 2026-07-15), jadi urutkan departemen dulu
+  // (urutan bisnis, bukan alfabetis) baru urutan di dalamnya - hasilnya tiap departemen tampil
+  // sebagai blok berurutan 1..N sendiri-sendiri, sama seperti akan tercetak.
   const kartuRows = ((kartuRes.data ?? []) as unknown as KartuRow[])
     .slice()
-    .sort((a, b) => (a.pengembalian?.urutan ?? Infinity) - (b.pengembalian?.urutan ?? Infinity));
+    .sort((a, b) =>
+      deptRank(a.pengembalian?.peserta?.departemen) - deptRank(b.pengembalian?.peserta?.departemen) ||
+      (a.pengembalian?.urutan ?? Infinity) - (b.pengembalian?.urutan ?? Infinity)
+    );
 
   // agregasi per peserta
   const itemsByPeserta = new Map<number, string[]>();
@@ -234,8 +237,8 @@ export default async function PengembalianPage({
                     <th className="px-4 py-3">No Badge</th>
                     <th className="px-4 py-3">Nama</th>
                     <th className="px-4 py-3">PIN</th>
-                    <th className="px-4 py-3">Divisi</th>
                     <th className="px-4 py-3">Jabatan</th>
+                    <th className="px-4 py-3">Batch</th>
                     <th className="px-4 py-3">Kondisi</th>
                     <th className="px-4 py-3">Tanggal Kembali</th>
                     <th className="px-4 py-3">Petugas</th>
@@ -243,18 +246,17 @@ export default async function PengembalianPage({
                 </thead>
                 <tbody>
                   {(() => {
-                    let lastBatch: number | null | undefined = undefined;
+                    let lastDept: string | null | undefined = undefined;
                     return filteredKartuRows.map((r, i) => {
                       const p = r.pengembalian?.peserta;
-                      const b = r.pengembalian?.batch ?? null;
-                      const showGroup = b !== lastBatch;
-                      lastBatch = b;
+                      const showGroup = p?.departemen !== lastDept;
+                      lastDept = p?.departemen;
                       return (
                         <Fragment key={`${r.pengembalian?.id}-${i}`}>
                           {showGroup && (
                             <tr className="bg-slate-50/80">
                               <td colSpan={9} className="px-5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                                {batchLabel(b)}
+                                {p?.departemen ?? "Tanpa Divisi"}
                               </td>
                             </tr>
                           )}
@@ -265,8 +267,10 @@ export default async function PengembalianPage({
                               {p ? <Link href={`/pengembalian/${p.id}`} className="hover:text-brand-600 hover:underline">{p.nama}</Link> : "-"}
                             </td>
                             <td className="px-4 py-2.5 tabular-nums text-slate-500">{p?.no_erp ?? "-"}</td>
-                            <td className="px-4 py-2.5 text-slate-600">{p?.departemen ?? "-"}</td>
                             <td className="px-4 py-2.5 text-slate-600">{p?.jabatan_deskripsi ?? "-"}</td>
+                            <td className="px-4 py-2.5">
+                              <span className="badge-pill bg-slate-100 text-slate-600">{batchLabel(r.pengembalian?.batch)}</span>
+                            </td>
                             <td className="px-4 py-2.5">
                               <KondisiBadge kondisi={r.kondisi} />
                             </td>
