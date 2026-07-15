@@ -37,14 +37,23 @@ export async function createPeserta(formData: FormData) {
 
   const supabase = await createClient();
 
+  // No badge BOLEH dipakai ulang oleh orang berbeda (kartu fisik beda corak per departemen/
+  // gelombang induction) - itu sah, bukan error. Yang benar-benar duplikat cuma kalau nama +
+  // no badge + departemen semuanya persis sama (record ganda dari orang yang sama).
   if (!errors.length && noBadge && statusBadge !== "PENDING") {
-    const { count } = await supabase
+    const { data: dupes } = await supabase
       .from("peserta")
-      .select("*", { count: "exact", head: true })
+      .select("id, nama")
       .eq("no_badge", noBadge)
+      .eq("departemen", departemen)
       .neq("status_badge", "PENDING");
-    if (count && count > 0) {
-      errors.push(`No Badge '${noBadge}' sudah dipakai. Data tidak disimpan.`);
+    const normNama = (nama ?? "").toUpperCase().replace(/[.'`",-]/g, " ").replace(/\s+/g, " ").trim();
+    const trueDup = (dupes ?? []).some((d) => {
+      const dn = (d.nama ?? "").toUpperCase().replace(/[.'`",-]/g, " ").replace(/\s+/g, " ").trim();
+      return dn === normNama;
+    });
+    if (trueDup) {
+      errors.push(`'${nama}' dengan No Badge '${noBadge}' di departemen ${departemen} sudah ada di database.`);
     }
   }
 
