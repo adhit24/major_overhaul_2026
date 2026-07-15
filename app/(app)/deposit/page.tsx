@@ -1,7 +1,8 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { TopBar } from "@/components/TopBar";
 import { StatusBadge } from "@/components/StatusBadge";
-import { DEPARTEMEN_SECTION, STATUS_BATCH } from "@/lib/constants";
+import { DEPARTEMEN, DEPARTEMEN_SECTION, STATUS_BATCH } from "@/lib/constants";
 import { createDepositBatch } from "./actions";
 import { SubmitButton } from "@/components/SubmitButton";
 
@@ -36,6 +37,33 @@ export default async function DepositPage({
 
   const { data: potonganRows } = await supabase.from("pengembalian_detail").select("potongan").range(0, 1999);
   const totalPotongan = (potonganRows ?? []).reduce((s, r) => s + Number(r.potongan), 0);
+
+  // Summary Pengembalian ID Card - jumlah kartu yang sudah dikembalikan, dipecah per
+  // departemen x batch (Batch 1 = dikunci, Batch 2 = mulai 18 Juli 2026, nomor lanjut per
+  // departemen). Query ringan (cuma hitung), detail lengkap & cetak/export ada di /pengembalian.
+  const { data: kembaliRows } = await supabase
+    .from("pengembalian_detail")
+    .select("pengembalian(departemen, batch)")
+    .eq("item", "KARTU")
+    .neq("kondisi", "HILANG");
+
+  type KembaliCount = { departemen: string | null; batch: number | null };
+  const perDeptBatch = new Map<string, { batch1: number; batch2: number }>();
+  for (const r of (kembaliRows ?? []) as unknown as { pengembalian: KembaliCount | null }[]) {
+    const dept = r.pengembalian?.departemen ?? "Tanpa Divisi";
+    const b = r.pengembalian?.batch;
+    const row = perDeptBatch.get(dept) ?? { batch1: 0, batch2: 0 };
+    if (b === 1) row.batch1 += 1;
+    else if (b === 2) row.batch2 += 1;
+    perDeptBatch.set(dept, row);
+  }
+  const deptOrder = [...DEPARTEMEN, "Tanpa Divisi"];
+  const kembaliBreakdown = deptOrder
+    .filter((d) => perDeptBatch.has(d))
+    .map((d) => ({ dept: d, ...perDeptBatch.get(d)! }));
+  const totalKembaliBatch1 = kembaliBreakdown.reduce((s, r) => s + r.batch1, 0);
+  const totalKembaliBatch2 = kembaliBreakdown.reduce((s, r) => s + r.batch2, 0);
+  const totalKembali = totalKembaliBatch1 + totalKembaliBatch2;
 
   return (
     <>
@@ -215,6 +243,79 @@ export default async function DepositPage({
                       {formatRupiah(totalDeposit)}
                     </td>
                     <td colSpan={2} />
+                  </tr>
+                </tfoot>
+              )}
+            </table>
+          </div>
+        </div>
+
+        {/* ── Summary Pengembalian ID Card ── */}
+        <div className="card p-0 overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-4 border-b border-slate-100">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-800">Summary Pengembalian ID Card</h2>
+              <p className="text-xs text-slate-400 mt-0.5">{totalKembali} kartu sudah dikembalikan</p>
+            </div>
+            <div className="flex items-center gap-3 text-xs">
+              <Link href="/pengembalian" className="font-medium text-brand-600 hover:underline">
+                Lihat Detail
+              </Link>
+              <Link href="/pengembalian/cetak/kembali" className="font-medium text-brand-600 hover:underline">
+                Cetak Daftar
+              </Link>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4 p-5">
+            <div className="text-center">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Dikembalikan</p>
+              <p className="mt-2 text-2xl font-bold text-slate-800">{totalKembali}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Batch 1 (dikunci)</p>
+              <p className="mt-2 text-2xl font-bold text-slate-800">{totalKembaliBatch1}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Batch 2 (mulai 18 Jul)</p>
+              <p className="mt-2 text-2xl font-bold text-emerald-600">{totalKembaliBatch2}</p>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto border-t border-slate-100">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50 text-xs uppercase tracking-wider text-slate-400">
+                  <th className="px-5 py-3 text-left font-semibold">Departemen</th>
+                  <th className="px-4 py-3 text-right font-semibold">Batch 1</th>
+                  <th className="px-4 py-3 text-right font-semibold">Batch 2</th>
+                  <th className="px-4 py-3 text-right font-semibold">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {kembaliBreakdown.map((r) => (
+                  <tr key={r.dept}>
+                    <td className="px-5 py-2.5 text-slate-700">{r.dept}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums text-slate-600">{r.batch1 || "-"}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums text-slate-600">{r.batch2 || "-"}</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-slate-800">{r.batch1 + r.batch2}</td>
+                  </tr>
+                ))}
+                {kembaliBreakdown.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-5 py-8 text-center text-slate-400 text-sm">
+                      Belum ada ID Card yang dikembalikan.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+              {kembaliBreakdown.length > 0 && (
+                <tfoot>
+                  <tr className="bg-slate-100 border-t-2 border-slate-200 font-semibold text-slate-700">
+                    <td className="px-5 py-3">Total Keseluruhan</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{totalKembaliBatch1}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{totalKembaliBatch2}</td>
+                    <td className="px-4 py-3 text-right tabular-nums">{totalKembali}</td>
                   </tr>
                 </tfoot>
               )}
