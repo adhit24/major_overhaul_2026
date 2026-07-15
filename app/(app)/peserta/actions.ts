@@ -77,6 +77,10 @@ export async function createPeserta(formData: FormData) {
     ktp,
     sks,
     sertifikat,
+    // Input manual lewat form ini SUDAH tervalidasi (diketik langsung oleh admin, bukan hasil
+    // sync massal yang belum dicocokkan ke master HRD) - kalau dibiarkan default false, peserta
+    // ini langsung hilang dari populasi Pengembalian & stat Dashboard walau baru saja disimpan.
+    tervalidasi_induction: true,
   });
 
   if (error) {
