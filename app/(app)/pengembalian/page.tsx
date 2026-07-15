@@ -142,14 +142,20 @@ export default async function PengembalianPage({
   const filteredKartuRows = kartuRows.filter((r) => matchesSearch(r.pengembalian?.peserta));
   const filteredRugiRows = rugiRows.filter((r) => matchesSearch(r.pengembalian?.peserta));
 
+  // Export PDF harus dalam urutan Departemen -> urutan (sama seperti halaman cetak), bukan
+  // urutan kartuRows biasa - filteredKartuRows sudah diurutkan begitu sejak Task 3, jadi tinggal
+  // dipetakan langsung. Label batch di PDF singkat ("Batch 1"/"Batch 2") karena cuma kolom
+  // tabel, bukan header grup seperti di layar - penjelasan lengkapnya ada di Catatan PDF.
   const exportKartuRows: ExportPdfRow[] = filteredKartuRows.map((r) => {
     const p = r.pengembalian?.peserta;
+    const b = r.pengembalian?.batch;
     return {
       no: r.pengembalian?.urutan ?? 0,
       badge: p?.no_badge ?? "-",
       nama: p?.nama ?? "-",
       pin: p?.no_erp ?? "-",
-      groupLabel: batchLabel(r.pengembalian?.batch),
+      departemen: p?.departemen ?? "Tanpa Divisi",
+      batch: b === 1 ? "Batch 1" : b === 2 ? "Batch 2" : `Batch ${b ?? "-"}`,
       jabatan: p?.jabatan_deskripsi ?? "-",
       kondisi: r.kondisi,
       tanggal: r.pengembalian?.tanggal ?? "-",

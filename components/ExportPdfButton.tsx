@@ -7,7 +7,8 @@ export type ExportPdfRow = {
   badge: string;
   nama: string;
   pin: string;
-  groupLabel: string;
+  departemen: string;
+  batch: string;
   jabatan: string;
   kondisi: string;
   tanggal: string;
@@ -43,31 +44,49 @@ export function ExportPdfButton({ title, subtitle, rows, filename }: Props) {
       doc.text(subtitle, 14, 20);
       doc.text(`Dicetak: ${dicetak} · Total: ${rows.length}`, 14, 25);
 
-      const body: (string | number)[][] = [];
-      let lastGroup = "";
+      // satu tabel autoTable per departemen (SECTION), diikuti baris SUBTOTAL,
+      // lalu GRAND TOTAL setelah tabel terakhir - mengikuti urutan kemunculan
+      // di `rows` (caller sudah mengurutkan sesuai DEPARTEMEN + urutan).
+      const groups: { dept: string; rows: ExportPdfRow[] }[] = [];
       for (const r of rows) {
-        if (r.groupLabel !== lastGroup) {
-          lastGroup = r.groupLabel;
-          body.push([{ content: lastGroup || "-", colSpan: 8 } as unknown as string]);
-        }
-        body.push([r.no, r.badge, r.nama, r.pin, r.jabatan, r.kondisi, r.tanggal, r.petugas]);
+        const last = groups[groups.length - 1];
+        if (last && last.dept === r.departemen) last.rows.push(r);
+        else groups.push({ dept: r.departemen, rows: [r] });
       }
 
-      autoTable.default(doc, {
-        startY: 29,
-        head: [["No", "Badge", "Nama", "PIN", "Jabatan", "Kondisi", "Tgl Kembali", "Petugas"]],
-        body,
-        styles: { fontSize: 7.5, cellPadding: 1.5 },
-        headStyles: { fillColor: [29, 78, 216], textColor: 255 },
-        didParseCell: (data) => {
-          const raw = data.row.raw as unknown[];
-          if (data.row.section === "body" && Array.isArray(raw) && raw.length === 1) {
-            data.cell.styles.fillColor = [241, 245, 249];
-            data.cell.styles.fontStyle = "bold";
-            data.cell.styles.textColor = [51, 65, 85];
-          }
-        },
-      });
+      let y = 29;
+      let sectionNo = 0;
+      for (const g of groups) {
+        sectionNo += 1;
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.text(`SECTION ${sectionNo}: ${g.dept}`, 14, y);
+        y += 2;
+
+        autoTable.default(doc, {
+          startY: y,
+          head: [["No", "Tanggal", "Badge", "Nama", "PIN", "Jabatan", "Kondisi", "Batch", "Petugas"]],
+          body: g.rows.map((r) => [r.no, r.tanggal, r.badge, r.nama, r.pin, r.jabatan, r.kondisi, r.batch, r.petugas]),
+          foot: [[{ content: `SUBTOTAL ${g.dept}`, colSpan: 8, styles: { halign: "right", fontStyle: "bold" } }, { content: String(g.rows.length), styles: { fontStyle: "bold" } }]],
+          styles: { fontSize: 7.5, cellPadding: 1.5 },
+          headStyles: { fillColor: [29, 78, 216], textColor: 255 },
+          footStyles: { fillColor: [241, 245, 249], textColor: [51, 65, 85] },
+        });
+
+        y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+      }
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text(`GRAND TOTAL: ${rows.length}`, 14, y);
+      y += 8;
+
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.text("Catatan:", 14, y);
+      doc.setFont("helvetica", "normal");
+      doc.text("1. Batch 1 = data pengembalian yang sudah dikunci per 15 Juli 2026.", 14, y + 4);
+      doc.text("2. Batch 2 = pengembalian mulai 18 Juli 2026, nomor urut lanjut otomatis per departemen.", 14, y + 8);
 
       doc.save(filename);
     } finally {
