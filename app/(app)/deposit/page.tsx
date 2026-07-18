@@ -3,8 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { TopBar } from "@/components/TopBar";
 import { StatusBadge } from "@/components/StatusBadge";
 import { DEPARTEMEN, DEPARTEMEN_SECTION, STATUS_BATCH } from "@/lib/constants";
-import { createDepositBatch } from "./actions";
+import { createDepositBatch, createCpsRefund } from "./actions";
 import { SubmitButton } from "@/components/SubmitButton";
+import { HapusCpsRefundButton } from "@/components/HapusCpsRefundButton";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +65,55 @@ export default async function DepositPage({
   const totalKembaliBatch1 = kembaliBreakdown.reduce((s, r) => s + r.batch1, 0);
   const totalKembaliBatch2 = kembaliBreakdown.reduce((s, r) => s + r.batch2, 0);
   const totalKembali = totalKembaliBatch1 + totalKembaliBatch2;
+
+  // Standing Dana Deposit di CPS - ledger transaksi pengembalian dana dari CPS,
+  // dibandingkan terhadap total deposit (per departemen & total) dan terhadap
+  // jumlah kartu yang benar-benar sudah dikembalikan pekerja (kembaliBreakdown di atas).
+  const { data: cpsRefunds } = await supabase
+    .from("cps_deposit_refund")
+    .select("*")
+    .order("tanggal", { ascending: false });
+
+  const depositByDept = new Map<string, number>();
+  for (const b of batches ?? []) {
+    const dept = b.departemen_section ?? "Tanpa Divisi";
+    depositByDept.set(dept, (depositByDept.get(dept) ?? 0) + Number(b.total_deposit ?? 0));
+  }
+
+  const cpsByDept = new Map<string, { uang: number; kartu: number }>();
+  for (const r of cpsRefunds ?? []) {
+    const row = cpsByDept.get(r.departemen) ?? { uang: 0, kartu: 0 };
+    row.uang += Number(r.jumlah_uang);
+    row.kartu += Number(r.jumlah_kartu);
+    cpsByDept.set(r.departemen, row);
+  }
+
+  const kartuKembaliByDept = new Map<string, number>();
+  for (const r of kembaliBreakdown) {
+    kartuKembaliByDept.set(r.dept, r.batch1 + r.batch2);
+  }
+
+  const cpsBreakdown = deptOrder
+    .map((d) => {
+      const dep = depositByDept.get(d) ?? 0;
+      const cps = cpsByDept.get(d) ?? { uang: 0, kartu: 0 };
+      const kartuKembali = kartuKembaliByDept.get(d) ?? 0;
+      return {
+        dept: d,
+        totalDeposit: dep,
+        dikembalikanCps: cps.uang,
+        standingBalance: dep - cps.uang,
+        kartuKembali,
+        kartuDicairkan: cps.kartu,
+        selisihKartu: kartuKembali - cps.kartu,
+      };
+    })
+    .filter((r) => r.totalDeposit > 0 || r.dikembalikanCps > 0 || r.kartuKembali > 0);
+
+  const totalDikembalikanCps = (cpsRefunds ?? []).reduce((s, r) => s + Number(r.jumlah_uang), 0);
+  const totalKartuDicairkanCps = (cpsRefunds ?? []).reduce((s, r) => s + Number(r.jumlah_kartu), 0);
+  const standingBalanceTotal = totalDeposit - totalDikembalikanCps;
+  const selisihKartuTotal = totalKembali - totalKartuDicairkanCps;
 
   return (
     <>
@@ -367,6 +417,240 @@ export default async function DepositPage({
                 </tfoot>
               )}
             </table>
+          </div>
+        </div>
+
+        {/* ── Standing Dana Deposit di CPS ── */}
+        <div className="card p-0 overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100">
+            <h2 className="text-sm font-semibold text-slate-800">Standing Dana Deposit di CPS</h2>
+            <p className="text-xs text-slate-400 mt-0.5">Pelacakan dana deposit yang masih di-hold oleh Cirebon Power Services</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 p-5 sm:grid-cols-4">
+            <div className="text-center">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Deposit</p>
+              <p className="mt-2 text-lg font-bold text-slate-800 sm:text-2xl">{formatRupiah(totalDeposit)}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Sudah Dikembalikan CPS</p>
+              <p className="mt-2 text-lg font-bold text-emerald-600 sm:text-2xl">{formatRupiah(totalDikembalikanCps)}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Standing Balance</p>
+              <p className={`mt-2 text-lg font-bold sm:text-2xl ${standingBalanceTotal > 0 ? "text-amber-600" : "text-slate-800"}`}>{formatRupiah(standingBalanceTotal)}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Selisih Kartu</p>
+              <p className={`mt-2 text-lg font-bold sm:text-2xl ${selisihKartuTotal < 0 ? "text-red-600" : "text-slate-800"}`}>{selisihKartuTotal}</p>
+              <p className="mt-1 text-xs text-slate-400">kembali − dicairkan CPS</p>
+            </div>
+          </div>
+
+          {cpsBreakdown.length > 0 && (
+            <>
+              {/* Mobile: kartu (< sm) */}
+              <div className="flex flex-col gap-2.5 border-t border-slate-100 p-3.5 sm:hidden">
+                {cpsBreakdown.map((r) => (
+                  <div key={r.dept} className="data-card">
+                    <p className="font-semibold text-slate-800">{r.dept}</p>
+                    <div className="my-2.5 border-t border-slate-100" />
+                    <div className="data-card-row">
+                      <span className="data-card-label">Total Deposit</span>
+                      <span className="data-card-value">{formatRupiah(r.totalDeposit)}</span>
+                    </div>
+                    <div className="data-card-row">
+                      <span className="data-card-label">Dikembalikan CPS</span>
+                      <span className="data-card-value text-emerald-700">{formatRupiah(r.dikembalikanCps)}</span>
+                    </div>
+                    <div className="data-card-row">
+                      <span className="data-card-label">Standing Balance</span>
+                      <span className="data-card-value font-semibold">{formatRupiah(r.standingBalance)}</span>
+                    </div>
+                    <div className="data-card-row">
+                      <span className="data-card-label">Kartu Kembali</span>
+                      <span className="data-card-value">{r.kartuKembali}</span>
+                    </div>
+                    <div className="data-card-row">
+                      <span className="data-card-label">Kartu Dicairkan CPS</span>
+                      <span className="data-card-value">{r.kartuDicairkan}</span>
+                    </div>
+                    <div className="data-card-row">
+                      <span className="data-card-label">Selisih Kartu</span>
+                      <span className={`data-card-value font-semibold ${r.selisihKartu < 0 ? "text-red-600" : ""}`}>{r.selisihKartu}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop/tablet: tabel (>= sm) */}
+              <div className="hidden overflow-x-auto border-t border-slate-100 sm:block">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 text-xs uppercase tracking-wider text-slate-400">
+                      <th className="px-5 py-3 text-left font-semibold">Departemen</th>
+                      <th className="px-4 py-3 text-right font-semibold">Total Deposit</th>
+                      <th className="px-4 py-3 text-right font-semibold">Dikembalikan CPS</th>
+                      <th className="px-4 py-3 text-right font-semibold">Standing Balance</th>
+                      <th className="px-4 py-3 text-right font-semibold">Kartu Kembali</th>
+                      <th className="px-4 py-3 text-right font-semibold">Kartu Dicairkan CPS</th>
+                      <th className="px-4 py-3 text-right font-semibold">Selisih Kartu</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {cpsBreakdown.map((r) => (
+                      <tr key={r.dept}>
+                        <td className="px-5 py-2.5 text-slate-700">{r.dept}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-slate-600">{formatRupiah(r.totalDeposit)}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-emerald-700">{formatRupiah(r.dikembalikanCps)}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-slate-800">{formatRupiah(r.standingBalance)}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-slate-600">{r.kartuKembali}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-slate-600">{r.kartuDicairkan}</td>
+                        <td className={`px-4 py-2.5 text-right tabular-nums font-semibold ${r.selisihKartu < 0 ? "text-red-600" : "text-slate-800"}`}>{r.selisihKartu}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="bg-slate-100 border-t-2 border-slate-200 font-semibold text-slate-700">
+                      <td className="px-5 py-3">Total Keseluruhan</td>
+                      <td className="px-4 py-3 text-right tabular-nums">{formatRupiah(totalDeposit)}</td>
+                      <td className="px-4 py-3 text-right tabular-nums">{formatRupiah(totalDikembalikanCps)}</td>
+                      <td className="px-4 py-3 text-right tabular-nums">{formatRupiah(standingBalanceTotal)}</td>
+                      <td className="px-4 py-3 text-right tabular-nums">{totalKembali}</td>
+                      <td className="px-4 py-3 text-right tabular-nums">{totalKartuDicairkanCps}</td>
+                      <td className={`px-4 py-3 text-right tabular-nums ${selisihKartuTotal < 0 ? "text-red-600" : ""}`}>{selisihKartuTotal}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </>
+          )}
+
+          {/* Form catat pengembalian dana CPS */}
+          <div className="border-t border-slate-100 p-5">
+            <p className="mb-4 text-sm font-semibold text-slate-700">Catat Pengembalian Dana CPS</p>
+            <form action={createCpsRefund} className="grid grid-cols-1 gap-3 sm:grid-cols-6">
+              <div className="sm:col-span-1">
+                <label className="label-field">Tanggal *</label>
+                <input name="tanggal" type="date" required className="input-field" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="label-field">Departemen *</label>
+                <select name="departemen" required defaultValue="" className="input-field">
+                  <option value="" disabled>Pilih</option>
+                  {DEPARTEMEN.map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="sm:col-span-1">
+                <label className="label-field">Jumlah Kartu *</label>
+                <input name="jumlah_kartu" type="number" min={1} required className="input-field" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="label-field">Jumlah Uang (Rp) *</label>
+                <input name="jumlah_uang" type="number" min={0} step={1000} required className="input-field" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="label-field">No. Referensi</label>
+                <input name="no_referensi" className="input-field" placeholder="mis. CPS-TID-07/26/010" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="label-field">Petugas</label>
+                <input name="petugas" className="input-field" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="label-field">Keterangan</label>
+                <input name="keterangan" className="input-field" />
+              </div>
+              <div className="sm:col-span-6 flex justify-end">
+                <SubmitButton className="btn-primary" pendingText="Menyimpan...">Simpan</SubmitButton>
+              </div>
+            </form>
+          </div>
+
+          {/* Riwayat transaksi */}
+          <div className="border-t border-slate-100">
+            <div className="px-5 py-4">
+              <h3 className="text-sm font-semibold text-slate-800">Riwayat Transaksi</h3>
+              <p className="text-xs text-slate-400 mt-0.5">{cpsRefunds?.length ?? 0} transaksi tercatat</p>
+            </div>
+            {!cpsRefunds?.length ? (
+              <p className="px-5 pb-10 text-center text-slate-400 text-sm">Belum ada transaksi pengembalian dana dari CPS.</p>
+            ) : (
+              <>
+                {/* Mobile: kartu (< sm) */}
+                <div className="flex flex-col gap-2.5 p-3.5 sm:hidden">
+                  {cpsRefunds.map((r) => (
+                    <div key={r.id} className="data-card">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <span className="inline-block rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">{r.departemen}</span>
+                          <p className="mt-1 text-xs text-slate-400">{r.tanggal}</p>
+                        </div>
+                        <HapusCpsRefundButton id={r.id} />
+                      </div>
+                      <div className="my-2.5 border-t border-slate-100" />
+                      <div className="data-card-row">
+                        <span className="data-card-label">Jumlah Kartu</span>
+                        <span className="data-card-value">{r.jumlah_kartu}</span>
+                      </div>
+                      <div className="data-card-row">
+                        <span className="data-card-label">Jumlah Uang</span>
+                        <span className="data-card-value font-semibold text-emerald-700">{formatRupiah(Number(r.jumlah_uang))}</span>
+                      </div>
+                      {r.no_referensi && (
+                        <div className="data-card-row">
+                          <span className="data-card-label">No. Referensi</span>
+                          <span className="data-card-value font-mono text-xs">{r.no_referensi}</span>
+                        </div>
+                      )}
+                      {r.petugas && (
+                        <div className="data-card-row">
+                          <span className="data-card-label">Petugas</span>
+                          <span className="data-card-value">{r.petugas}</span>
+                        </div>
+                      )}
+                      {r.keterangan && <p className="mt-2 text-sm text-slate-600">{r.keterangan}</p>}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop/tablet: tabel (>= sm) */}
+                <div className="hidden overflow-x-auto sm:block">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-slate-50 text-xs uppercase tracking-wider text-slate-400">
+                        <th className="px-5 py-3 text-left font-semibold">Tanggal</th>
+                        <th className="px-4 py-3 text-left font-semibold">Departemen</th>
+                        <th className="px-4 py-3 text-right font-semibold">Jml Kartu</th>
+                        <th className="px-4 py-3 text-right font-semibold">Jumlah Uang</th>
+                        <th className="px-4 py-3 text-left font-semibold">No. Referensi</th>
+                        <th className="px-4 py-3 text-left font-semibold">Petugas</th>
+                        <th className="px-4 py-3 text-left font-semibold">Keterangan</th>
+                        <th className="px-4 py-3"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {cpsRefunds.map((r) => (
+                        <tr key={r.id}>
+                          <td className="px-5 py-2.5 text-slate-600 whitespace-nowrap">{r.tanggal}</td>
+                          <td className="px-4 py-2.5 whitespace-nowrap">
+                            <span className="inline-block rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">{r.departemen}</span>
+                          </td>
+                          <td className="px-4 py-2.5 text-right tabular-nums text-slate-600">{r.jumlah_kartu}</td>
+                          <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-emerald-700 whitespace-nowrap">{formatRupiah(Number(r.jumlah_uang))}</td>
+                          <td className="px-4 py-2.5 text-slate-500 font-mono text-xs">{r.no_referensi ?? <span className="text-slate-300">—</span>}</td>
+                          <td className="px-4 py-2.5 text-slate-500">{r.petugas ?? <span className="text-slate-300">—</span>}</td>
+                          <td className="px-4 py-2.5 text-slate-500 max-w-[200px]"><span className="line-clamp-1">{r.keterangan ?? <span className="text-slate-300">—</span>}</span></td>
+                          <td className="px-4 py-2.5 text-right"><HapusCpsRefundButton id={r.id} /></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
