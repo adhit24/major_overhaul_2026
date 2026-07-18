@@ -567,6 +567,10 @@ export default async function DepositPage({
                 <label className="label-field">Keterangan</label>
                 <input name="keterangan" className="input-field" />
               </div>
+              <div className="sm:col-span-4">
+                <label className="label-field">Lampiran Kwitansi (opsional)</label>
+                <input name="lampiran" type="file" accept=".pdf,.jpg,.jpeg,.png" className="input-field file:mr-3 file:rounded-md file:border-0 file:bg-brand-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-brand-700" />
+              </div>
               <div className="sm:col-span-6 flex justify-end">
                 <SubmitButton className="btn-primary" pendingText="Menyimpan...">Simpan</SubmitButton>
               </div>
@@ -616,6 +620,11 @@ export default async function DepositPage({
                         </div>
                       )}
                       {r.keterangan && <p className="mt-2 text-sm text-slate-600">{r.keterangan}</p>}
+                      {r.lampiran_url && (
+                        <a href={r.lampiran_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-xs font-medium text-brand-600 hover:underline">
+                          Lihat Kwitansi
+                        </a>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -632,6 +641,7 @@ export default async function DepositPage({
                         <th className="px-4 py-3 text-left font-semibold">No. Referensi</th>
                         <th className="px-4 py-3 text-left font-semibold">Petugas</th>
                         <th className="px-4 py-3 text-left font-semibold">Keterangan</th>
+                        <th className="px-4 py-3 text-left font-semibold">Kwitansi</th>
                         <th className="px-4 py-3"></th>
                       </tr>
                     </thead>
@@ -647,6 +657,15 @@ export default async function DepositPage({
                           <td className="px-4 py-2.5 text-slate-500 font-mono text-xs">{r.no_referensi ?? <span className="text-slate-300">—</span>}</td>
                           <td className="px-4 py-2.5 text-slate-500">{r.petugas ?? <span className="text-slate-300">—</span>}</td>
                           <td className="px-4 py-2.5 text-slate-500 max-w-[200px]"><span className="line-clamp-1">{r.keterangan ?? <span className="text-slate-300">—</span>}</span></td>
+                          <td className="px-4 py-2.5 whitespace-nowrap">
+                            {r.lampiran_url ? (
+                              <a href={r.lampiran_url} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-brand-600 hover:underline">
+                                Lihat Kwitansi
+                              </a>
+                            ) : (
+                              <span className="text-slate-300">—</span>
+                            )}
+                          </td>
                           <td className="px-4 py-2.5 text-right"><HapusCpsRefundButton id={r.id} /></td>
                         </tr>
                       ))}

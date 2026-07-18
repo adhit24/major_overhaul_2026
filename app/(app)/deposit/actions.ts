@@ -69,6 +69,21 @@ export async function createCpsRefund(formData: FormData) {
   }
 
   const supabase = await createClient();
+
+  let lampiranUrl: string | null = null;
+  const lampiran = formData.get("lampiran");
+  if (lampiran instanceof File && lampiran.size > 0) {
+    const ext = lampiran.name.split(".").pop() || "bin";
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from("receipts").upload(path, lampiran, {
+      contentType: lampiran.type || "application/octet-stream",
+    });
+    if (uploadError) {
+      redirect(`/deposit?error=${encodeURIComponent("Gagal mengunggah lampiran: " + uploadError.message)}`);
+    }
+    lampiranUrl = supabase.storage.from("receipts").getPublicUrl(path).data.publicUrl;
+  }
+
   const { error } = await supabase.from("cps_deposit_refund").insert({
     tanggal,
     departemen,
@@ -77,6 +92,7 @@ export async function createCpsRefund(formData: FormData) {
     no_referensi: noReferensi,
     petugas,
     keterangan,
+    lampiran_url: lampiranUrl,
   });
 
   if (error) {
