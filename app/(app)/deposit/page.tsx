@@ -122,11 +122,15 @@ export default async function DepositPage({
       <main className="flex-1 space-y-6 p-4 pb-10 sm:p-6">
 
         {/* ── Alerts ── */}
-        {params.saved && (
+        {params.saved === "cps" ? (
+          <p className="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-2.5 text-sm text-emerald-700">
+            ✓ Pengembalian dana CPS berhasil dicatat.
+          </p>
+        ) : params.saved ? (
           <p className="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-2.5 text-sm text-emerald-700">
             ✓ Batch deposit berhasil disimpan.
           </p>
-        )}
+        ) : null}
         {params.error && (
           <p className="rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 text-sm text-red-700">
             {params.error}

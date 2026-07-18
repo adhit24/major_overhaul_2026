@@ -84,7 +84,7 @@ export async function createCpsRefund(formData: FormData) {
   }
 
   revalidatePath("/deposit");
-  redirect("/deposit?saved=1");
+  redirect("/deposit?saved=cps");
 }
 
 export async function hapusCpsRefund(formData: FormData): Promise<{ error: string | null }> {
