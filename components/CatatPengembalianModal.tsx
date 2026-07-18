@@ -51,7 +51,10 @@ function CatatModal({ peserta, sudahTercatat, tarif, onClose }: Props & { onClos
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <h3 className="text-base font-bold text-slate-800">Catat Pengembalian</h3>
         <p className="mt-0.5 text-sm text-slate-500">{peserta.nama} — Badge {peserta.no_badge ?? "-"}</p>
 

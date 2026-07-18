@@ -234,7 +234,68 @@ export default async function ManpowerPage({
                 Tutup ×
               </Link>
             </div>
-            <div className="overflow-x-auto">
+            {/* Mobile: kartu (< sm) */}
+            <div className="flex flex-col gap-2.5 p-3.5 sm:hidden">
+              {perluTindakWorkers.map((p) => (
+                <div key={p.id as string} className="data-card">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-slate-800">{p.nama as string}</p>
+                      <p className="text-xs text-slate-400">
+                        {(p.no_badge as string | null) ? `Badge ${p.no_badge}` : "Belum ada badge"}
+                        {p.departemen ? ` · ${p.departemen}` : ""}
+                      </p>
+                    </div>
+                    <StatusBadge status={(p.status_badge as string | null) ?? "PENDING"} />
+                  </div>
+                  <div className="my-2.5 border-t border-slate-100" />
+                  <div className="data-card-row">
+                    <span className="data-card-label">Jabatan</span>
+                    <span className="data-card-value">{(p.jabatan_deskripsi as string | null) ?? "-"}</span>
+                  </div>
+                  <div className="data-card-row">
+                    <span className="data-card-label">Leader</span>
+                    <span className="data-card-value">{(p.leader as string | null) ?? "-"}</span>
+                  </div>
+                  <div className="data-card-row">
+                    <span className="data-card-label">Tgl Induction</span>
+                    <span className="data-card-value">{(p.tanggal_induction as string | null) ?? "-"}</span>
+                  </div>
+                  <div className="data-card-row">
+                    <span className="data-card-label">Dok</span>
+                    <span className="data-card-value flex justify-end gap-1">
+                      {p.ktp        ? <span className="text-[10px] rounded bg-emerald-100 text-emerald-700 px-1 py-0.5 font-semibold">KTP</span>  : null}
+                      {p.sks        ? <span className="text-[10px] rounded bg-blue-100   text-blue-700   px-1 py-0.5 font-semibold">SKS</span>  : null}
+                      {p.sertifikat ? <span className="text-[10px] rounded bg-violet-100 text-violet-700 px-1 py-0.5 font-semibold">SERT</span> : null}
+                      {!p.ktp && !p.sks && !p.sertifikat ? <span className="text-slate-300">—</span> : null}
+                    </span>
+                  </div>
+                  {(p.remarks as string | null) ? (
+                    <p className="mt-1 text-xs text-slate-400">{p.remarks as string}</p>
+                  ) : null}
+                  <div className="mt-3 flex justify-end border-t border-slate-100 pt-2.5">
+                    <EditPesertaButton peserta={{
+                      id:                p.id as number,
+                      nama:              p.nama as string,
+                      no_badge:          p.no_badge as string | null,
+                      no_erp:            p.no_erp as string | null,
+                      status_badge:      p.status_badge as string | null,
+                      jabatan_deskripsi: p.jabatan_deskripsi as string | null,
+                      leader:            p.leader as string | null,
+                      tanggal_induction: p.tanggal_induction as string | null,
+                      due_date:          p.due_date as string | null,
+                      ktp:               p.ktp as boolean,
+                      sks:               p.sks as boolean,
+                      sertifikat:        p.sertifikat as boolean,
+                      remarks:           p.remarks as string | null,
+                    }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop/tablet: tabel (>= sm) */}
+            <div className="hidden overflow-x-auto sm:block">
               <table className="w-full text-sm text-left">
                 <thead>
                   <tr className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none">
@@ -342,7 +403,84 @@ export default async function ManpowerPage({
               </Link>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Mobile: kartu (< sm) */}
+            <div className="flex flex-col gap-2.5 p-3.5 sm:hidden">
+              {workers.length === 0 ? (
+                <p className="py-8 text-center text-sm text-slate-400">Tidak ada data untuk divisi ini.</p>
+              ) : (
+                workers.map((p) => (
+                  <div key={p.id as string} className="data-card">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-slate-800">{p.nama as string}</p>
+                        <p className="text-xs text-slate-400">
+                          {(p.no_badge as string | null) ? `Badge ${p.no_badge}` : "Belum ada badge"}
+                          {p.no_erp ? ` · ERP ${p.no_erp}` : ""}
+                        </p>
+                      </div>
+                      <StatusBadge status={(p.status_badge as string | null) ?? "PENDING"} />
+                    </div>
+                    <div className="my-2.5 border-t border-slate-100" />
+                    <div className="data-card-row">
+                      <span className="data-card-label">Kategori</span>
+                      <span className="data-card-value">{(p.kategori as string | null) ?? "-"}</span>
+                    </div>
+                    <div className="data-card-row">
+                      <span className="data-card-label">Job No</span>
+                      <span className="data-card-value">{(p.job_no as string | null) ?? "-"}</span>
+                    </div>
+                    <div className="data-card-row">
+                      <span className="data-card-label">Jabatan</span>
+                      <span className="data-card-value">{(p.jabatan_deskripsi as string | null) ?? "-"}</span>
+                    </div>
+                    <div className="data-card-row">
+                      <span className="data-card-label">Leader</span>
+                      <span className="data-card-value">{(p.leader as string | null) ?? "-"}</span>
+                    </div>
+                    <div className="data-card-row">
+                      <span className="data-card-label">Tgl Induction</span>
+                      <span className="data-card-value">{(p.tanggal_induction as string | null) ?? "-"}</span>
+                    </div>
+                    <div className="data-card-row">
+                      <span className="data-card-label">Due Date</span>
+                      <span className="data-card-value">{(p.due_date as string | null) ?? "-"}</span>
+                    </div>
+                    <div className="data-card-row">
+                      <span className="data-card-label">Dok</span>
+                      <span className="data-card-value flex justify-end gap-1">
+                        {p.ktp        ? <span className="text-[10px] rounded bg-emerald-100 text-emerald-700 px-1 py-0.5 font-semibold">KTP</span>  : null}
+                        {p.sks        ? <span className="text-[10px] rounded bg-blue-100   text-blue-700   px-1 py-0.5 font-semibold">SKS</span>  : null}
+                        {p.sertifikat ? <span className="text-[10px] rounded bg-violet-100 text-violet-700 px-1 py-0.5 font-semibold">SERT</span> : null}
+                        {!p.ktp && !p.sks && !p.sertifikat ? <span className="text-slate-300">—</span> : null}
+                      </span>
+                    </div>
+                    {(p.remarks as string | null) ? (
+                      <p className="mt-1 text-xs text-slate-400">{p.remarks as string}</p>
+                    ) : null}
+                    <div className="mt-3 flex justify-end border-t border-slate-100 pt-2.5">
+                      <EditPesertaButton peserta={{
+                        id:                p.id as number,
+                        nama:              p.nama as string,
+                        no_badge:          p.no_badge as string | null,
+                        no_erp:            p.no_erp as string | null,
+                        status_badge:      p.status_badge as string | null,
+                        jabatan_deskripsi: p.jabatan_deskripsi as string | null,
+                        leader:            p.leader as string | null,
+                        tanggal_induction: p.tanggal_induction as string | null,
+                        due_date:          p.due_date as string | null,
+                        ktp:               p.ktp as boolean,
+                        sks:               p.sks as boolean,
+                        sertifikat:        p.sertifikat as boolean,
+                        remarks:           p.remarks as string | null,
+                      }} />
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Desktop/tablet: tabel (>= sm) */}
+            <div className="hidden overflow-x-auto sm:block">
               <table className="w-full text-sm text-left">
                 <thead>
                   <tr className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wider text-slate-400 select-none">

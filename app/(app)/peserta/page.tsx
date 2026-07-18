@@ -1,4 +1,4 @@
-import Link from "next/link";
+ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { TopBar } from "@/components/TopBar";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -93,37 +93,46 @@ export default async function PesertaPage({
             </Link>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b border-slate-100 text-xs uppercase text-slate-400">
-                  <th className="py-2 pr-4">Nama</th>
-                  <th className="py-2 pr-4">No ERP</th>
-                  <th className="py-2 pr-4">No Badge</th>
-                  <th className="py-2 pr-4">Departemen</th>
-                  <th className="py-2 pr-4">Kategori</th>
-                  <th className="py-2 pr-4">Leader</th>
-                  <th className="py-2 pr-4">Status</th>
-                  <th className="py-2 pr-4">Tgl Induction</th>
-                  <th className="py-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {(peserta ?? []).map((p) => (
-                  <tr key={p.id} className="border-b border-slate-50 hover:bg-slate-50">
-                    <td className="py-2 pr-4 font-medium text-slate-800">{p.nama}</td>
-                    <td className="py-2 pr-4 text-slate-600">{p.no_erp ?? "-"}</td>
-                    <td className="py-2 pr-4 text-slate-600">{p.no_badge ?? "-"}</td>
-                    <td className="py-2 pr-4 text-slate-600">
-                      {p.departemen ?? <span className="badge-pill bg-orange-50 text-orange-700">Perlu Verifikasi</span>}
-                    </td>
-                    <td className="py-2 pr-4 text-slate-600">{p.kategori ?? "-"}</td>
-                    <td className="py-2 pr-4 text-slate-600">{p.leader ?? "-"}</td>
-                    <td className="py-2 pr-4">
+          {!peserta?.length ? (
+            <p className="py-8 text-center text-sm text-slate-400">
+              {error ? error.message : "Tidak ada data yang cocok dengan filter."}
+            </p>
+          ) : (
+            <>
+              {/* Mobile: kartu ringkas per peserta (< sm) */}
+              <div className="flex flex-col gap-2.5 sm:hidden">
+                {peserta.map((p) => (
+                  <div key={p.id} className="data-card">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-slate-800">{p.nama}</p>
+                        <p className="text-xs text-slate-400">
+                          {p.no_badge ? `Badge ${p.no_badge}` : "Belum ada badge"}
+                          {p.no_erp ? ` · ERP ${p.no_erp}` : ""}
+                        </p>
+                      </div>
                       <StatusBadge status={p.status_badge} />
-                    </td>
-                    <td className="py-2 pr-4 text-slate-600">{p.tanggal_induction ?? "-"}</td>
-                    <td className="py-2">
+                    </div>
+                    <div className="my-2.5 border-t border-slate-100" />
+                    <div className="data-card-row">
+                      <span className="data-card-label">Departemen</span>
+                      <span className="data-card-value">
+                        {p.departemen ?? <span className="badge-pill bg-orange-50 text-orange-700">Perlu Verifikasi</span>}
+                      </span>
+                    </div>
+                    <div className="data-card-row">
+                      <span className="data-card-label">Kategori</span>
+                      <span className="data-card-value">{p.kategori ?? "-"}</span>
+                    </div>
+                    <div className="data-card-row">
+                      <span className="data-card-label">Leader</span>
+                      <span className="data-card-value">{p.leader ?? "-"}</span>
+                    </div>
+                    <div className="data-card-row">
+                      <span className="data-card-label">Tgl Induction</span>
+                      <span className="data-card-value">{p.tanggal_induction ?? "-"}</span>
+                    </div>
+                    <div className="mt-3 flex justify-end border-t border-slate-100 pt-2.5">
                       <EditPesertaButton peserta={{
                         id:                p.id,
                         nama:              p.nama,
@@ -139,19 +148,66 @@ export default async function PesertaPage({
                         sertifikat:        p.sertifikat ?? false,
                         remarks:           p.remarks ?? null,
                       }} />
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 ))}
-                {!peserta?.length ? (
-                  <tr>
-                    <td colSpan={9} className="py-6 text-center text-slate-400">
-                      {error ? error.message : "Tidak ada data yang cocok dengan filter."}
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
+              </div>
+
+              {/* Desktop/tablet: tabel penuh (>= sm) */}
+              <div className="hidden overflow-x-auto sm:block">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-xs uppercase text-slate-400">
+                      <th className="py-2 pr-4">Nama</th>
+                      <th className="py-2 pr-4">No ERP</th>
+                      <th className="py-2 pr-4">No Badge</th>
+                      <th className="py-2 pr-4">Departemen</th>
+                      <th className="py-2 pr-4">Kategori</th>
+                      <th className="py-2 pr-4">Leader</th>
+                      <th className="py-2 pr-4">Status</th>
+                      <th className="py-2 pr-4">Tgl Induction</th>
+                      <th className="py-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {peserta.map((p) => (
+                      <tr key={p.id} className="border-b border-slate-50 hover:bg-slate-50">
+                        <td className="py-2 pr-4 font-medium text-slate-800">{p.nama}</td>
+                        <td className="py-2 pr-4 text-slate-600">{p.no_erp ?? "-"}</td>
+                        <td className="py-2 pr-4 text-slate-600">{p.no_badge ?? "-"}</td>
+                        <td className="py-2 pr-4 text-slate-600">
+                          {p.departemen ?? <span className="badge-pill bg-orange-50 text-orange-700">Perlu Verifikasi</span>}
+                        </td>
+                        <td className="py-2 pr-4 text-slate-600">{p.kategori ?? "-"}</td>
+                        <td className="py-2 pr-4 text-slate-600">{p.leader ?? "-"}</td>
+                        <td className="py-2 pr-4">
+                          <StatusBadge status={p.status_badge} />
+                        </td>
+                        <td className="py-2 pr-4 text-slate-600">{p.tanggal_induction ?? "-"}</td>
+                        <td className="py-2">
+                          <EditPesertaButton peserta={{
+                            id:                p.id,
+                            nama:              p.nama,
+                            no_badge:          p.no_badge ?? null,
+                            no_erp:            p.no_erp ?? null,
+                            status_badge:      p.status_badge ?? null,
+                            jabatan_deskripsi: p.jabatan_deskripsi ?? null,
+                            leader:            p.leader ?? null,
+                            tanggal_induction: p.tanggal_induction ?? null,
+                            due_date:          p.due_date ?? null,
+                            ktp:               p.ktp ?? false,
+                            sks:               p.sks ?? false,
+                            sertifikat:        p.sertifikat ?? false,
+                            remarks:           p.remarks ?? null,
+                          }} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
           <p className="mt-3 text-xs text-slate-400">Menampilkan maksimum 100 baris terbaru. Gunakan filter untuk mempersempit hasil.</p>
         </div>
       </main>

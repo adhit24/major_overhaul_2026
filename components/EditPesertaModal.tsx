@@ -27,8 +27,9 @@ export function EditPesertaButton({ peserta }: { peserta: Peserta }) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="rounded p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600 transition-colors"
+        className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-brand-600 transition-colors"
         title="Edit data"
+        aria-label="Edit data"
       >
         <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
           <path d="M13.586 3.586a2 2 0 1 1 2.828 2.828l-.793.793-2.828-2.828.793-.793ZM11.379 5.793 3 14.172V17h2.828l8.38-8.379-2.83-2.828Z" />
@@ -134,16 +135,17 @@ function EditModal({ peserta, onClose }: { peserta: Peserta; onClose: () => void
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
 
       {/* Modal */}
-      <div className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200">
+      <div className="relative flex max-h-[90dvh] w-full max-w-md flex-col rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200">
         {/* Header */}
-        <div className="flex items-start justify-between border-b border-slate-100 px-6 py-4">
+        <div className="flex shrink-0 items-start justify-between border-b border-slate-100 px-6 py-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Edit Peserta</p>
             <p className="mt-0.5 text-base font-bold text-slate-800">{peserta.nama}</p>
           </div>
           <button
             onClick={onClose}
-            className="ml-4 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+            aria-label="Tutup"
+            className="ml-4 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
           >
             <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5">
               <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
@@ -152,7 +154,7 @@ function EditModal({ peserta, onClose }: { peserta: Peserta; onClose: () => void
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto px-6 py-5">
 
           {/* Status Badge */}
           <div>
@@ -186,7 +188,7 @@ function EditModal({ peserta, onClose }: { peserta: Peserta; onClose: () => void
                 value={form.no_badge}
                 onChange={(e) => set('no_badge', e.target.value)}
                 placeholder="mis. 253"
-                className="input w-full font-mono"
+                className="input-field font-mono"
               />
             </div>
             <div>
@@ -196,7 +198,7 @@ function EditModal({ peserta, onClose }: { peserta: Peserta; onClose: () => void
                 value={form.no_erp}
                 onChange={(e) => set('no_erp', e.target.value)}
                 placeholder="mis. 30001"
-                className="input w-full font-mono"
+                className="input-field font-mono"
               />
             </div>
           </div>
@@ -209,7 +211,7 @@ function EditModal({ peserta, onClose }: { peserta: Peserta; onClose: () => void
                 type="text"
                 value={form.jabatan_deskripsi}
                 onChange={(e) => set('jabatan_deskripsi', e.target.value)}
-                className="input w-full"
+                className="input-field"
               />
             </div>
             <div>
@@ -218,7 +220,7 @@ function EditModal({ peserta, onClose }: { peserta: Peserta; onClose: () => void
                 type="text"
                 value={form.leader}
                 onChange={(e) => set('leader', e.target.value)}
-                className="input w-full"
+                className="input-field"
               />
             </div>
           </div>
@@ -231,7 +233,7 @@ function EditModal({ peserta, onClose }: { peserta: Peserta; onClose: () => void
                 type="date"
                 value={form.tanggal_induction}
                 onChange={(e) => set('tanggal_induction', e.target.value)}
-                className="input w-full"
+                className="input-field"
               />
             </div>
             <div>
@@ -240,7 +242,7 @@ function EditModal({ peserta, onClose }: { peserta: Peserta; onClose: () => void
                 type="date"
                 value={form.due_date}
                 onChange={(e) => set('due_date', e.target.value)}
-                className="input w-full"
+                className="input-field"
               />
             </div>
           </div>
@@ -270,7 +272,7 @@ function EditModal({ peserta, onClose }: { peserta: Peserta; onClose: () => void
               rows={2}
               value={form.remarks}
               onChange={(e) => set('remarks', e.target.value)}
-              className="input w-full resize-none"
+              className="input-field resize-none"
               placeholder="Catatan tambahan..."
             />
           </div>
@@ -365,7 +367,7 @@ function EditModal({ peserta, onClose }: { peserta: Peserta; onClose: () => void
                     onChange={(e) => { setPin(e.target.value); setPinError(''); }}
                     onKeyDown={(e) => { if (e.key === 'Enter') handleDelete(); if (e.key === 'Escape') setShowPinPrompt(false); }}
                     placeholder="● ● ● ● ● ●"
-                    className="input w-full text-center text-lg tracking-[0.4em] font-mono mb-2"
+                    className="input-field text-center text-lg tracking-[0.4em] font-mono mb-2"
                   />
 
                   {pinError && <p className="mb-3 text-xs text-red-500">{pinError}</p>}

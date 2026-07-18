@@ -7,7 +7,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen bg-slate-50">
       <IdleLogout />
       <Sidebar />
-      <div className="flex flex-1 flex-col pb-16 sm:pb-0">{children}</div>
+      <div className="flex min-w-0 flex-1 flex-col pb-16 sm:pb-0">{children}</div>
       <BottomNav />
     </div>
   );

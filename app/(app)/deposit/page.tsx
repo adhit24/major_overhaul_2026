@@ -171,83 +171,130 @@ export default async function DepositPage({
             <h2 className="text-sm font-semibold text-slate-800">Riwayat Batch Deposit</h2>
             <p className="text-xs text-slate-400 mt-0.5">{batches?.length ?? 0} batch tercatat</p>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-slate-50 text-xs uppercase tracking-wider text-slate-400">
-                  <th className="px-5 py-3 text-left font-semibold">Tanggal</th>
-                  <th className="px-4 py-3 text-left font-semibold">Departemen</th>
-                  <th className="px-4 py-3 text-left font-semibold">Keterangan</th>
-                  <th className="px-4 py-3 text-left font-semibold">Rentang No ID</th>
-                  <th className="px-4 py-3 text-right font-semibold">Jml Kartu</th>
-                  <th className="px-4 py-3 text-right font-semibold">Total Deposit</th>
-                  <th className="px-4 py-3 text-center font-semibold">Due Date</th>
-                  <th className="px-4 py-3 text-center font-semibold">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {(batches ?? []).map((b, i) => (
-                  <tr
-                    key={b.id}
-                    className={`transition-colors hover:bg-slate-50 ${i % 2 === 0 ? "bg-white" : "bg-slate-50/40"}`}
-                  >
-                    <td className="px-5 py-3 text-slate-600 whitespace-nowrap">{b.tanggal}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">
-                      {b.departemen_section ? (
-                        <span className="inline-block rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
-                          {b.departemen_section}
-                        </span>
-                      ) : (
-                        <span className="text-slate-300">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600 max-w-[220px]">
-                      <span className="line-clamp-2">{b.keterangan ?? <span className="text-slate-300">—</span>}</span>
-                    </td>
-                    <td className="px-4 py-3 text-slate-500 font-mono text-xs">
-                      {b.rentang_no_id ?? <span className="text-slate-300">—</span>}
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold text-slate-800">
-                      {Number(b.jumlah_kartu).toLocaleString("id-ID")}
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold text-emerald-700 whitespace-nowrap">
-                      {formatRupiah(Number(b.total_deposit))}
-                    </td>
-                    <td className="px-4 py-3 text-center text-slate-500 whitespace-nowrap">
-                      {b.due_date ?? <span className="text-slate-300">—</span>}
-                    </td>
-                    <td className="px-4 py-3 text-center">
+          {!batches?.length ? (
+            <p className="px-5 py-10 text-center text-slate-400 text-sm">Belum ada batch deposit.</p>
+          ) : (
+            <>
+              {/* Mobile: kartu (< sm) */}
+              <div className="flex flex-col gap-2.5 p-3.5 sm:hidden">
+                {batches.map((b) => (
+                  <div key={b.id} className="data-card">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        {b.departemen_section ? (
+                          <span className="inline-block rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+                            {b.departemen_section}
+                          </span>
+                        ) : (
+                          <span className="text-slate-300">—</span>
+                        )}
+                        <p className="mt-1 text-xs text-slate-400">{b.tanggal}</p>
+                      </div>
                       <StatusBadge status={b.status_batch} />
-                    </td>
-                  </tr>
+                    </div>
+                    {b.keterangan && <p className="mt-2 text-sm text-slate-600">{b.keterangan}</p>}
+                    <div className="my-2.5 border-t border-slate-100" />
+                    <div className="data-card-row">
+                      <span className="data-card-label">Rentang No ID</span>
+                      <span className="data-card-value font-mono text-xs">{b.rentang_no_id ?? "-"}</span>
+                    </div>
+                    <div className="data-card-row">
+                      <span className="data-card-label">Jml Kartu</span>
+                      <span className="data-card-value font-semibold">{Number(b.jumlah_kartu).toLocaleString("id-ID")}</span>
+                    </div>
+                    <div className="data-card-row">
+                      <span className="data-card-label">Total Deposit</span>
+                      <span className="data-card-value font-semibold text-emerald-700">{formatRupiah(Number(b.total_deposit))}</span>
+                    </div>
+                    <div className="data-card-row">
+                      <span className="data-card-label">Due Date</span>
+                      <span className="data-card-value">{b.due_date ?? "-"}</span>
+                    </div>
+                  </div>
                 ))}
-                {!batches?.length && (
-                  <tr>
-                    <td colSpan={8} className="px-5 py-10 text-center text-slate-400 text-sm">
-                      Belum ada batch deposit.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-              {/* Footer total */}
-              {(batches?.length ?? 0) > 0 && (
-                <tfoot>
-                  <tr className="bg-slate-100 border-t-2 border-slate-200 font-semibold text-slate-700">
-                    <td className="px-5 py-3" colSpan={4}>
-                      Total Keseluruhan
-                    </td>
-                    <td className="px-4 py-3 text-right text-slate-800">
-                      {totalKartu.toLocaleString("id-ID")}
-                    </td>
-                    <td className="px-4 py-3 text-right text-emerald-700 whitespace-nowrap">
-                      {formatRupiah(totalDeposit)}
-                    </td>
-                    <td colSpan={2} />
-                  </tr>
-                </tfoot>
-              )}
-            </table>
-          </div>
+                <div className="data-card bg-slate-50">
+                  <div className="data-card-row">
+                    <span className="data-card-label">Total Kartu</span>
+                    <span className="data-card-value font-semibold">{totalKartu.toLocaleString("id-ID")}</span>
+                  </div>
+                  <div className="data-card-row">
+                    <span className="data-card-label">Total Deposit</span>
+                    <span className="data-card-value font-semibold text-emerald-700">{formatRupiah(totalDeposit)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Desktop/tablet: tabel (>= sm) */}
+              <div className="hidden overflow-x-auto sm:block">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-slate-50 text-xs uppercase tracking-wider text-slate-400">
+                      <th className="px-5 py-3 text-left font-semibold">Tanggal</th>
+                      <th className="px-4 py-3 text-left font-semibold">Departemen</th>
+                      <th className="px-4 py-3 text-left font-semibold">Keterangan</th>
+                      <th className="px-4 py-3 text-left font-semibold">Rentang No ID</th>
+                      <th className="px-4 py-3 text-right font-semibold">Jml Kartu</th>
+                      <th className="px-4 py-3 text-right font-semibold">Total Deposit</th>
+                      <th className="px-4 py-3 text-center font-semibold">Due Date</th>
+                      <th className="px-4 py-3 text-center font-semibold">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {batches.map((b, i) => (
+                      <tr
+                        key={b.id}
+                        className={`transition-colors hover:bg-slate-50 ${i % 2 === 0 ? "bg-white" : "bg-slate-50/40"}`}
+                      >
+                        <td className="px-5 py-3 text-slate-600 whitespace-nowrap">{b.tanggal}</td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          {b.departemen_section ? (
+                            <span className="inline-block rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+                              {b.departemen_section}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-slate-600 max-w-[220px]">
+                          <span className="line-clamp-2">{b.keterangan ?? <span className="text-slate-300">—</span>}</span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-500 font-mono text-xs">
+                          {b.rentang_no_id ?? <span className="text-slate-300">—</span>}
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold text-slate-800">
+                          {Number(b.jumlah_kartu).toLocaleString("id-ID")}
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold text-emerald-700 whitespace-nowrap">
+                          {formatRupiah(Number(b.total_deposit))}
+                        </td>
+                        <td className="px-4 py-3 text-center text-slate-500 whitespace-nowrap">
+                          {b.due_date ?? <span className="text-slate-300">—</span>}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <StatusBadge status={b.status_batch} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  {/* Footer total */}
+                  <tfoot>
+                    <tr className="bg-slate-100 border-t-2 border-slate-200 font-semibold text-slate-700">
+                      <td className="px-5 py-3" colSpan={4}>
+                        Total Keseluruhan
+                      </td>
+                      <td className="px-4 py-3 text-right text-slate-800">
+                        {totalKartu.toLocaleString("id-ID")}
+                      </td>
+                      <td className="px-4 py-3 text-right text-emerald-700 whitespace-nowrap">
+                        {formatRupiah(totalDeposit)}
+                      </td>
+                      <td colSpan={2} />
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </>
+          )}
         </div>
 
         {/* ── Summary Pengembalian ID Card ── */}
@@ -286,19 +333,19 @@ export default async function DepositPage({
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 text-xs uppercase tracking-wider text-slate-400">
-                  <th className="px-5 py-3 text-left font-semibold">Departemen</th>
-                  <th className="px-4 py-3 text-right font-semibold">Batch 1</th>
-                  <th className="px-4 py-3 text-right font-semibold">Batch 2</th>
-                  <th className="px-4 py-3 text-right font-semibold">Total</th>
+                  <th className="px-3 py-3 text-left font-semibold sm:px-5">Departemen</th>
+                  <th className="px-2 py-3 text-right font-semibold sm:px-4">Batch 1</th>
+                  <th className="px-2 py-3 text-right font-semibold sm:px-4">Batch 2</th>
+                  <th className="px-3 py-3 text-right font-semibold sm:px-4">Total</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {kembaliBreakdown.map((r) => (
                   <tr key={r.dept}>
-                    <td className="px-5 py-2.5 text-slate-700">{r.dept}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums text-slate-600">{r.batch1 || "-"}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums text-slate-600">{r.batch2 || "-"}</td>
-                    <td className="px-4 py-2.5 text-right tabular-nums font-semibold text-slate-800">{r.batch1 + r.batch2}</td>
+                    <td className="px-3 py-2.5 text-slate-700 sm:px-5">{r.dept}</td>
+                    <td className="px-2 py-2.5 text-right tabular-nums text-slate-600 sm:px-4">{r.batch1 || "-"}</td>
+                    <td className="px-2 py-2.5 text-right tabular-nums text-slate-600 sm:px-4">{r.batch2 || "-"}</td>
+                    <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-slate-800 sm:px-4">{r.batch1 + r.batch2}</td>
                   </tr>
                 ))}
                 {kembaliBreakdown.length === 0 && (
@@ -312,10 +359,10 @@ export default async function DepositPage({
               {kembaliBreakdown.length > 0 && (
                 <tfoot>
                   <tr className="bg-slate-100 border-t-2 border-slate-200 font-semibold text-slate-700">
-                    <td className="px-5 py-3">Total Keseluruhan</td>
-                    <td className="px-4 py-3 text-right tabular-nums">{totalKembaliBatch1}</td>
-                    <td className="px-4 py-3 text-right tabular-nums">{totalKembaliBatch2}</td>
-                    <td className="px-4 py-3 text-right tabular-nums">{totalKembali}</td>
+                    <td className="px-3 py-3 sm:px-5">Total Keseluruhan</td>
+                    <td className="px-2 py-3 text-right tabular-nums sm:px-4">{totalKembaliBatch1}</td>
+                    <td className="px-2 py-3 text-right tabular-nums sm:px-4">{totalKembaliBatch2}</td>
+                    <td className="px-3 py-3 text-right tabular-nums sm:px-4">{totalKembali}</td>
                   </tr>
                 </tfoot>
               )}
