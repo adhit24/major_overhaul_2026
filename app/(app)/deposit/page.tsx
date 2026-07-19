@@ -426,9 +426,14 @@ export default async function DepositPage({
 
         {/* ── Standing Dana Deposit di CPS ── */}
         <div className="card p-0 overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-100">
-            <h2 className="text-sm font-semibold text-slate-800">Standing Dana Deposit di CPS</h2>
-            <p className="text-xs text-slate-400 mt-0.5">Pelacakan dana deposit yang masih di-hold oleh Cirebon Power Services</p>
+          <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-4 border-b border-slate-100">
+            <div>
+              <h2 className="text-sm font-semibold text-slate-800">Standing Dana Deposit di CPS</h2>
+              <p className="text-xs text-slate-400 mt-0.5">Pelacakan dana deposit yang masih di-hold oleh Cirebon Power Services</p>
+            </div>
+            <Link href="/deposit/cetak/cps-refund" className="text-xs font-medium text-brand-600 hover:underline">
+              Cetak Laporan
+            </Link>
           </div>
 
           <div className="grid grid-cols-2 gap-4 p-5 sm:grid-cols-4">
