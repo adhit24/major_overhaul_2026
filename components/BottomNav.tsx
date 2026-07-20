@@ -58,6 +58,19 @@ const NAV = [
       </svg>
     ),
   },
+  {
+    href: '/pengembalian/kehilangan',
+    label: 'Hilang',
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+        <rect x="2" y="5" width="20" height="14" rx="2" />
+        <line x1="6" y1="15" x2="10" y2="15" />
+        <line x1="6" y1="17.5" x2="12" y2="17.5" />
+        <line x1="15" y1="9" x2="19" y2="13" />
+        <line x1="19" y1="9" x2="15" y2="13" />
+      </svg>
+    ),
+  },
 ];
 
 export function BottomNav() {
@@ -67,7 +80,11 @@ export function BottomNav() {
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white sm:hidden print:hidden">
       <div className="flex h-16 items-stretch">
         {NAV.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(item.href + '/');
+          // Href terpanjang yang cocok yang "menang" (mis. /pengembalian/kehilangan tidak
+          // ikut menyalakan /pengembalian).
+          const matches = NAV.filter((n) => pathname === n.href || pathname.startsWith(n.href + '/'));
+          const best = matches.sort((a, b) => b.href.length - a.href.length)[0];
+          const active = best?.href === item.href;
           return (
             <Link
               key={item.href}
