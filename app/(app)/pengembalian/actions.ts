@@ -17,6 +17,61 @@ function batchForTanggal(tanggal: string): number {
   return BATCH_CUTOFFS[BATCH_CUTOFFS.length - 1].batch + 1;
 }
 
+// Kartu HILANG tidak memakai slot urutan (lihat catatPengembalian). Untuk kartu yang
+// benar-benar kembali, urutan HARUS mengikuti No Badge terkecil -> terbesar di dalam batch
+// yang sama (permintaan user) - jadi tiap kali ada insert baru atau kondisi HILANG berubah
+// jadi kembali, seluruh batch+departemen itu dinomori ulang dari No Badge, bukan cuma
+// ditambah di akhir. Batch lain (termasuk yang sudah lewat cutoff-nya) tidak pernah disentuh.
+async function renumberBatchByBadge(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  departemen: string | null,
+  batch: number
+) {
+  let q = supabase
+    .from("pengembalian")
+    .select("id, urutan, peserta(no_badge), pengembalian_detail(item, kondisi)")
+    .eq("batch", batch);
+  q = departemen ? q.eq("departemen", departemen) : q.is("departemen", null);
+  const { data: rows } = await q;
+
+  const eligible = (rows ?? []).filter((r) => {
+    const det = (r.pengembalian_detail as { item: string; kondisi: string }[] | null) ?? [];
+    const kartu = det.find((d) => d.item === "KARTU");
+    return !!kartu && kartu.kondisi !== "HILANG";
+  });
+  if (eligible.length === 0) return;
+
+  let prevMaxQuery = supabase
+    .from("pengembalian")
+    .select("urutan")
+    .not("urutan", "is", null)
+    .lt("batch", batch)
+    .order("urutan", { ascending: false })
+    .limit(1);
+  prevMaxQuery = departemen ? prevMaxQuery.eq("departemen", departemen) : prevMaxQuery.is("departemen", null);
+  const { data: prevMaxRow } = await prevMaxQuery.maybeSingle();
+  const offset = prevMaxRow?.urutan ?? 0;
+
+  const badgeNum = (badge: string | null | undefined) => {
+    const n = Number(String(badge ?? "").replace(/[^0-9]/g, ""));
+    return Number.isFinite(n) && badge ? n : Number.MAX_SAFE_INTEGER;
+  };
+
+  const sorted = [...eligible].sort((a, b) => {
+    const pa = a.peserta as unknown as { no_badge: string | null } | null;
+    const pb = b.peserta as unknown as { no_badge: string | null } | null;
+    return badgeNum(pa?.no_badge) - badgeNum(pb?.no_badge);
+  });
+
+  await Promise.all(
+    sorted.map((row, i) => {
+      const newUrutan = offset + i + 1;
+      if (row.urutan === newUrutan) return null;
+      return supabase.from("pengembalian").update({ urutan: newUrutan }).eq("id", row.id);
+    })
+  );
+}
+
 function revalidateAll() {
   revalidatePath("/pengembalian");
   revalidatePath("/dashboard");
@@ -69,37 +124,13 @@ export async function catatPengembalian(formData: FormData) {
   const petugas = userData.user?.email ?? null;
 
   // Batch sebuah kejadian ditentukan dari tanggal pengembaliannya lewat BATCH_CUTOFFS (batch
-  // yang sudah lewat cutoff-nya tidak pernah di-renumber lagi). Penomoran "urutan" berlanjut
-  // dari yang terakhir DALAM DEPARTEMEN PESERTA ITU SAJA (bukan lintas departemen, dan lintas
-  // semua batch - bukan reset per batch), supaya laporan per divisi tetap bernomor rapi 1..N.
-  // Kartu HILANG tetap dapat label batch (untuk modul Kartu Hilang) tapi TIDAK memakai slot
-  // urutan - urutan itu daftar kartu yang benar-benar kembali saja, supaya nomornya tidak
-  // "dimakan" kartu hilang yang justru punya daftar/cetak sendiri.
+  // yang sudah lewat cutoff-nya tidak pernah di-renumber lagi). Urutan-nya sendiri baru
+  // dihitung SETELAH insert lewat renumberBatchByBadge (badge terkecil -> terbesar per
+  // departemen dalam batch itu) - kartu HILANG tetap dapat label batch tapi tidak dinomori.
   const kartuItem = items.find((i) => i.item === "KARTU");
-  let batchFields:
-    | { batch: number; urutan: number; departemen: string | null }
-    | { batch: number; departemen: string | null }
-    | { departemen: string | null } = {
-    departemen: peserta.departemen,
-  };
-  if (kartuItem && kartuItem.kondisi === "HILANG") {
-    batchFields = { batch: batchForTanggal(tanggal), departemen: peserta.departemen };
-  } else if (kartuItem) {
-    // .eq("departemen", null) serializes as a literal equality (matches nothing), not an
-    // IS NULL check - peserta tanpa departemen butuh .is() supaya lookup MAX(urutan)-nya
-    // tetap benar dan tidak selalu jatuh ke 1 (yang akan bikin urutan dobel diam-diam).
-    let maxQuery = supabase
-      .from("pengembalian")
-      .select("urutan")
-      .not("urutan", "is", null)
-      .order("urutan", { ascending: false })
-      .limit(1);
-    maxQuery = peserta.departemen
-      ? maxQuery.eq("departemen", peserta.departemen)
-      : maxQuery.is("departemen", null);
-    const { data: maxRow } = await maxQuery.maybeSingle();
-    batchFields = { batch: batchForTanggal(tanggal), urutan: (maxRow?.urutan ?? 0) + 1, departemen: peserta.departemen };
-  }
+  const batchFields: { batch: number; departemen: string | null } | { departemen: string | null } = kartuItem
+    ? { batch: batchForTanggal(tanggal), departemen: peserta.departemen }
+    : { departemen: peserta.departemen };
 
   const { data: kejadian, error: insErr } = await supabase
     .from("pengembalian")
@@ -120,6 +151,9 @@ export async function catatPengembalian(formData: FormData) {
   if (kartu) {
     const newStatus = kartu.kondisi === "HILANG" ? "HANGUS" : "RETURNED";
     await supabase.from("peserta").update({ status_badge: newStatus }).eq("id", pesertaId);
+    if (kartu.kondisi !== "HILANG" && "batch" in batchFields) {
+      await renumberBatchByBadge(supabase, peserta.departemen, batchFields.batch);
+    }
   }
 
   revalidateAll();
@@ -141,24 +175,21 @@ export async function updatePengembalianDetail(formData: FormData) {
   const supabase = await createClient();
 
   // Kartu HILANG tidak memakai slot urutan (lihat catatPengembalian) - kalau kondisi KARTU
-  // diubah masuk/keluar dari HILANG lewat edit, lepas atau berikan slot urutan supaya
-  // aturan itu tetap konsisten, bukan cuma berlaku saat input pertama.
+  // diubah masuk/keluar dari HILANG lewat edit, lepas atau berikan slot urutan supaya aturan
+  // itu tetap konsisten, bukan cuma berlaku saat input pertama. Perlu tahu kondisi LAMA-nya
+  // dulu (sebelum di-update) untuk tahu ini transisi ke arah mana.
+  let oldKondisi: string | undefined;
+  let g: { urutan: number | null; departemen: string | null; batch: number | null } | null = null;
+  let pengembalianId: number | undefined;
   if (item === "KARTU") {
     const { data: detailRow } = await supabase
       .from("pengembalian_detail")
-      .select("kondisi, pengembalian_id, pengembalian(urutan, departemen)")
+      .select("kondisi, pengembalian_id, pengembalian(urutan, departemen, batch)")
       .eq("id", detailId)
       .single();
-    const oldKondisi = detailRow?.kondisi;
-    const g = detailRow?.pengembalian as unknown as { urutan: number | null; departemen: string | null } | null;
-    if (oldKondisi && oldKondisi !== "HILANG" && kondisi === "HILANG" && g?.urutan != null) {
-      await supabase.from("pengembalian").update({ urutan: null }).eq("id", detailRow!.pengembalian_id);
-    } else if (oldKondisi === "HILANG" && kondisi !== "HILANG" && g && g.urutan == null) {
-      let maxQuery = supabase.from("pengembalian").select("urutan").not("urutan", "is", null).order("urutan", { ascending: false }).limit(1);
-      maxQuery = g.departemen ? maxQuery.eq("departemen", g.departemen) : maxQuery.is("departemen", null);
-      const { data: maxRow } = await maxQuery.maybeSingle();
-      await supabase.from("pengembalian").update({ urutan: (maxRow?.urutan ?? 0) + 1 }).eq("id", detailRow!.pengembalian_id);
-    }
+    oldKondisi = detailRow?.kondisi;
+    pengembalianId = detailRow?.pengembalian_id;
+    g = detailRow?.pengembalian as unknown as { urutan: number | null; departemen: string | null; batch: number | null } | null;
   }
 
   const { error } = await supabase
@@ -170,6 +201,15 @@ export async function updatePengembalianDetail(formData: FormData) {
   if (item === "KARTU") {
     const newStatus = kondisi === "HILANG" ? "HANGUS" : "RETURNED";
     await supabase.from("peserta").update({ status_badge: newStatus }).eq("id", pesertaId);
+
+    if (oldKondisi && oldKondisi !== "HILANG" && kondisi === "HILANG" && g?.urutan != null && pengembalianId) {
+      await supabase.from("pengembalian").update({ urutan: null }).eq("id", pengembalianId);
+    } else if (oldKondisi === "HILANG" && kondisi !== "HILANG" && g?.batch != null) {
+      // kondisi pengembalian_detail sudah ter-update di atas, jadi renumberBatchByBadge
+      // sekarang akan menganggap baris ini layak dinomori dan menyisipkannya di posisi
+      // No Badge yang benar bersama sisa batch itu.
+      await renumberBatchByBadge(supabase, g.departemen, g.batch);
+    }
   }
 
   revalidateAll();
