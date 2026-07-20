@@ -4,6 +4,19 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { APD_ITEMS, KONDISI_ITEM, type ApdItem } from "@/lib/constants";
 
+// Batas kunci tiap batch pengembalian (tanggal terakhir yang masuk batch tsb, inklusif).
+// Begitu satu batch dikunci pada tanggal tertentu, tambahkan entri baru di sini alih-alih
+// mengubah baris yang sudah ada - urutan tetap berkelanjutan per departemen lintas batch,
+// cuma label batch-nya yang berganti otomatis begitu tanggal pengembalian lewat cutoff.
+const BATCH_CUTOFFS: { through: string; batch: number }[] = [
+  { through: "2026-07-15", batch: 1 },
+  { through: "2026-07-20", batch: 2 },
+];
+function batchForTanggal(tanggal: string): number {
+  for (const c of BATCH_CUTOFFS) if (tanggal <= c.through) return c.batch;
+  return BATCH_CUTOFFS[BATCH_CUTOFFS.length - 1].batch + 1;
+}
+
 function revalidateAll() {
   revalidatePath("/pengembalian");
   revalidatePath("/dashboard");
@@ -55,10 +68,10 @@ export async function catatPengembalian(formData: FormData) {
   const { data: userData } = await supabase.auth.getUser();
   const petugas = userData.user?.email ?? null;
 
-  // Batch 1 (data terkunci per 15 Jul 2026) tidak pernah di-renumber lagi. Setiap pengembalian
-  // KARTU baru sejak sekarang otomatis masuk batch 2 dan penomoran "urutan" berlanjut dari yang
-  // terakhir DALAM DEPARTEMEN PESERTA ITU SAJA (bukan lintas departemen), supaya laporan per
-  // divisi tetap bernomor rapi 1..N sendiri-sendiri.
+  // Batch sebuah kejadian ditentukan dari tanggal pengembaliannya lewat BATCH_CUTOFFS (batch
+  // yang sudah lewat cutoff-nya tidak pernah di-renumber lagi). Penomoran "urutan" berlanjut
+  // dari yang terakhir DALAM DEPARTEMEN PESERTA ITU SAJA (bukan lintas departemen, dan lintas
+  // semua batch - bukan reset per batch), supaya laporan per divisi tetap bernomor rapi 1..N.
   let batchFields: { batch: number; urutan: number; departemen: string | null } | { departemen: string | null } = {
     departemen: peserta.departemen,
   };
@@ -76,7 +89,7 @@ export async function catatPengembalian(formData: FormData) {
       ? maxQuery.eq("departemen", peserta.departemen)
       : maxQuery.is("departemen", null);
     const { data: maxRow } = await maxQuery.maybeSingle();
-    batchFields = { batch: 2, urutan: (maxRow?.urutan ?? 0) + 1, departemen: peserta.departemen };
+    batchFields = { batch: batchForTanggal(tanggal), urutan: (maxRow?.urutan ?? 0) + 1, departemen: peserta.departemen };
   }
 
   const { data: kejadian, error: insErr } = await supabase
