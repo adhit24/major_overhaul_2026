@@ -72,10 +72,19 @@ export async function catatPengembalian(formData: FormData) {
   // yang sudah lewat cutoff-nya tidak pernah di-renumber lagi). Penomoran "urutan" berlanjut
   // dari yang terakhir DALAM DEPARTEMEN PESERTA ITU SAJA (bukan lintas departemen, dan lintas
   // semua batch - bukan reset per batch), supaya laporan per divisi tetap bernomor rapi 1..N.
-  let batchFields: { batch: number; urutan: number; departemen: string | null } | { departemen: string | null } = {
+  // Kartu HILANG tetap dapat label batch (untuk modul Kartu Hilang) tapi TIDAK memakai slot
+  // urutan - urutan itu daftar kartu yang benar-benar kembali saja, supaya nomornya tidak
+  // "dimakan" kartu hilang yang justru punya daftar/cetak sendiri.
+  const kartuItem = items.find((i) => i.item === "KARTU");
+  let batchFields:
+    | { batch: number; urutan: number; departemen: string | null }
+    | { batch: number; departemen: string | null }
+    | { departemen: string | null } = {
     departemen: peserta.departemen,
   };
-  if (items.some((i) => i.item === "KARTU")) {
+  if (kartuItem && kartuItem.kondisi === "HILANG") {
+    batchFields = { batch: batchForTanggal(tanggal), departemen: peserta.departemen };
+  } else if (kartuItem) {
     // .eq("departemen", null) serializes as a literal equality (matches nothing), not an
     // IS NULL check - peserta tanpa departemen butuh .is() supaya lookup MAX(urutan)-nya
     // tetap benar dan tidak selalu jatuh ke 1 (yang akan bikin urutan dobel diam-diam).
@@ -130,6 +139,28 @@ export async function updatePengembalianDetail(formData: FormData) {
   if (!Number.isFinite(potongan) || potongan < 0) return { error: "Potongan tidak valid." };
 
   const supabase = await createClient();
+
+  // Kartu HILANG tidak memakai slot urutan (lihat catatPengembalian) - kalau kondisi KARTU
+  // diubah masuk/keluar dari HILANG lewat edit, lepas atau berikan slot urutan supaya
+  // aturan itu tetap konsisten, bukan cuma berlaku saat input pertama.
+  if (item === "KARTU") {
+    const { data: detailRow } = await supabase
+      .from("pengembalian_detail")
+      .select("kondisi, pengembalian_id, pengembalian(urutan, departemen)")
+      .eq("id", detailId)
+      .single();
+    const oldKondisi = detailRow?.kondisi;
+    const g = detailRow?.pengembalian as unknown as { urutan: number | null; departemen: string | null } | null;
+    if (oldKondisi && oldKondisi !== "HILANG" && kondisi === "HILANG" && g?.urutan != null) {
+      await supabase.from("pengembalian").update({ urutan: null }).eq("id", detailRow!.pengembalian_id);
+    } else if (oldKondisi === "HILANG" && kondisi !== "HILANG" && g && g.urutan == null) {
+      let maxQuery = supabase.from("pengembalian").select("urutan").not("urutan", "is", null).order("urutan", { ascending: false }).limit(1);
+      maxQuery = g.departemen ? maxQuery.eq("departemen", g.departemen) : maxQuery.is("departemen", null);
+      const { data: maxRow } = await maxQuery.maybeSingle();
+      await supabase.from("pengembalian").update({ urutan: (maxRow?.urutan ?? 0) + 1 }).eq("id", detailRow!.pengembalian_id);
+    }
+  }
+
   const { error } = await supabase
     .from("pengembalian_detail")
     .update({ kondisi, potongan })

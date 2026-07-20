@@ -16,6 +16,12 @@ const deptRank = (d: string | null | undefined) => {
   return i === -1 ? DEPARTEMEN.length : i;
 };
 
+// Dalam satu departemen, urutkan no badge kecil -> besar (bukan tanggal/alfabetis).
+const badgeNum = (badge: string | null | undefined) => {
+  const n = Number(badge);
+  return Number.isFinite(n) && badge ? n : Infinity;
+};
+
 type Row = {
   potongan: number;
   pengembalian: {
@@ -52,7 +58,10 @@ export default async function KartuHilangPage({
     .eq("kondisi", "HILANG");
 
   const qLower = (q ?? "").toLowerCase();
-  const rows = ((data ?? []) as unknown as Row[])
+  // Kartu HILANG tidak memakai slot urutan bersama (lihat catatPengembalian), jadi daftar
+  // ini punya nomor urut sendiri per departemen (localNo), diurutkan dari No Badge terkecil
+  // ke terbesar dalam satu departemen (bukan tanggal/alfabetis).
+  const sortedRows = ((data ?? []) as unknown as Row[])
     .filter((r) => {
       const p = r.pengembalian?.peserta;
       if (!p) return false;
@@ -62,8 +71,16 @@ export default async function KartuHilangPage({
     })
     .sort((a, b) =>
       deptRank(a.pengembalian?.peserta?.departemen) - deptRank(b.pengembalian?.peserta?.departemen) ||
-      (a.pengembalian?.urutan ?? Infinity) - (b.pengembalian?.urutan ?? Infinity)
+      badgeNum(a.pengembalian?.peserta?.no_badge) - badgeNum(b.pengembalian?.peserta?.no_badge)
     );
+
+  const deptCounters = new Map<string, number>();
+  const rows = sortedRows.map((r) => {
+    const key = r.pengembalian?.peserta?.departemen ?? "";
+    const localNo = (deptCounters.get(key) ?? 0) + 1;
+    deptCounters.set(key, localNo);
+    return { ...r, localNo };
+  });
 
   const totalPotongan = rows.reduce((s, r) => s + Number(r.potongan), 0);
 
@@ -137,7 +154,7 @@ export default async function KartuHilangPage({
                         <div className="p-3.5 text-sm">
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <span className="mr-1.5 text-xs tabular-nums text-slate-400">#{r.pengembalian?.urutan ?? "-"}</span>
+                              <span className="mr-1.5 text-xs tabular-nums text-slate-400">#{r.localNo}</span>
                               {p ? (
                                 <Link href={`/pengembalian/${p.id}`} className="font-semibold text-slate-800 hover:text-brand-600 hover:underline">
                                   {p.nama}
@@ -196,7 +213,7 @@ export default async function KartuHilangPage({
                               </tr>
                             )}
                             <tr className="border-b border-slate-50">
-                              <td className="px-5 py-2.5 tabular-nums text-slate-500">{r.pengembalian?.urutan ?? "-"}</td>
+                              <td className="px-5 py-2.5 tabular-nums text-slate-500">{r.localNo}</td>
                               <td className="px-4 py-2.5 tabular-nums">{p?.no_badge ?? "-"}</td>
                               <td className="px-4 py-2.5 font-medium text-slate-800">
                                 {p ? <Link href={`/pengembalian/${p.id}`} className="hover:text-brand-600 hover:underline">{p.nama}</Link> : "-"}

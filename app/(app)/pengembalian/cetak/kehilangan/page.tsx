@@ -62,16 +62,23 @@ export default async function CetakKehilanganPage({
     return `/pengembalian/cetak/kehilangan${qs ? `?${qs}` : ""}`;
   };
 
+  // Kartu HILANG tidak memakai slot urutan bersama (lihat catatPengembalian), jadi tiap
+  // SECTION diurutkan dari No Badge terkecil ke terbesar, dan "No" di tabel = nomor lokal
+  // 1..N per section (bukan urutan dari daftar Pengembalian yang sudah kembali).
+  const badgeNum = (badge: string | null | undefined) => {
+    const n = Number(badge);
+    return Number.isFinite(n) && badge ? n : Infinity;
+  };
   const sections: { dept: string; rows: Row[] }[] = DEPARTEMEN.map((dName) => ({
     dept: dName as string,
     rows: rows
       .filter((r) => (r.pengembalian?.peserta?.departemen ?? "") === dName)
-      .sort((a, b) => (a.pengembalian?.urutan ?? Infinity) - (b.pengembalian?.urutan ?? Infinity)),
+      .sort((a, b) => badgeNum(a.pengembalian?.peserta?.no_badge) - badgeNum(b.pengembalian?.peserta?.no_badge)),
   })).filter((s) => s.rows.length > 0);
 
   const tanpaDivisi = rows
     .filter((r) => !r.pengembalian?.peserta?.departemen)
-    .sort((a, b) => (a.pengembalian?.urutan ?? Infinity) - (b.pengembalian?.urutan ?? Infinity));
+    .sort((a, b) => badgeNum(a.pengembalian?.peserta?.no_badge) - badgeNum(b.pengembalian?.peserta?.no_badge));
   if (tanpaDivisi.length > 0) sections.push({ dept: "Tanpa Divisi", rows: tanpaDivisi });
 
   const grandTotal = rows.length;
@@ -158,7 +165,7 @@ export default async function CetakKehilanganPage({
                   const p = r.pengembalian?.peserta;
                   return (
                     <tr key={i} className="border-b border-slate-200" style={{ breakInside: "avoid" }}>
-                      <td className="px-1.5 py-1 whitespace-nowrap">{r.pengembalian?.urutan ?? "-"}</td>
+                      <td className="px-1.5 py-1 whitespace-nowrap">{i + 1}</td>
                       <td className="px-1.5 py-1 whitespace-nowrap">{r.pengembalian?.tanggal ?? "-"}</td>
                       <td className="px-1.5 py-1 whitespace-nowrap">{p?.no_badge ?? "-"}</td>
                       <td className="px-1.5 py-1 break-words">{p?.nama ?? "-"}</td>
@@ -195,7 +202,7 @@ export default async function CetakKehilanganPage({
         <p className="font-semibold">Catatan:</p>
         <ol className="ml-4 list-decimal space-y-0.5">
           <li>Daftar ini khusus kartu ID yang dinyatakan HILANG (tidak kembali secara fisik) - kartu yang kembali (kondisi baik maupun rusak) ada di Daftar Pengembalian.</li>
-          <li>Nomor urut (No) mengikuti penomoran fisik/administratif per departemen yang sama dengan Daftar Pengembalian, jadi tetap konsisten walau dicetak terpisah.</li>
+          <li>Kartu HILANG tidak memakai nomor urut Daftar Pengembalian - nomor No di sini adalah nomor lokal 1..N per departemen, diurutkan dari No Badge terkecil ke terbesar.</li>
           <li>Potongan mengikuti tarif kehilangan yang berlaku saat kejadian dicatat.</li>
         </ol>
       </div>
