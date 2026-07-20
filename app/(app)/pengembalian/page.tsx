@@ -88,13 +88,15 @@ export default async function PengembalianPage({
       peserta: { id: number; nama: string; no_badge: string | null; no_erp: string | null;
         departemen: string | null; jabatan_deskripsi: string | null } | null } | null;
   };
-  // Urutkan departemen dulu (urutan bisnis, bukan alfabetis), lalu No Badge terkecil ke
-  // terbesar di dalamnya - No (urutan pencatatan) tetap ditampilkan apa adanya di kolomnya,
-  // cuma urutan barisnya yang ikut No Badge, sama seperti yang akan tercetak.
+  // Urutkan departemen dulu (urutan bisnis, bukan alfabetis), lalu batch (tiap batch punya
+  // pool No sendiri), baru No Badge terkecil ke terbesar DI DALAM batch itu - kalau langsung
+  // diurutkan badge lintas batch, No akan terlihat loncat-loncat karena dua pool nomor yang
+  // beda ikut terselang-seling. No (urutan pencatatan) sendiri tetap ditampilkan apa adanya.
   const kartuRows = ((kartuRes.data ?? []) as unknown as KartuRow[])
     .slice()
     .sort((a, b) =>
       deptRank(a.pengembalian?.peserta?.departemen) - deptRank(b.pengembalian?.peserta?.departemen) ||
+      (a.pengembalian?.batch ?? Infinity) - (b.pengembalian?.batch ?? Infinity) ||
       badgeNum(a.pengembalian?.peserta?.no_badge) - badgeNum(b.pengembalian?.peserta?.no_badge)
     );
 

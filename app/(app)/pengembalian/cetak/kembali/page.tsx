@@ -68,24 +68,30 @@ export default async function CetakKembaliPage({
     return `/pengembalian/cetak/kembali${qs ? `?${qs}` : ""}`;
   };
 
-  // Satu SECTION per departemen (urutan bisnis DEPARTEMEN), tiap section diurutkan dari
-  // No Badge terkecil ke terbesar (bukan urutan/No pencatatan) - No tetap ditampilkan apa
-  // adanya di kolomnya masing-masing untuk ketertelusuran, cuma urutan barisnya yang ikut badge.
+  // Satu SECTION per departemen (urutan bisnis DEPARTEMEN). Tiap batch punya pool nomor
+  // sendiri (Batch 1 = 1..N, Batch 2 lanjut dari situ, dst), jadi saat "Semua Batch" tampil
+  // bersamaan, urutkan batch dulu baru No Badge terkecil ke terbesar DI DALAM batch itu -
+  // kalau cuma diurutkan badge lintas batch, No akan terlihat loncat-loncat karena dua pool
+  // nomor yang beda ikut terselang-seling. Saat satu batch difilter, ini otomatis jadi
+  // urutan badge polos seperti biasa (batch-nya sudah sama semua).
   const badgeNum = (badge: string | null | undefined) => {
     const n = Number(badge);
     return Number.isFinite(n) && badge ? n : Infinity;
   };
+  const rowSort = (a: Row, b: Row) =>
+    (a.pengembalian?.batch ?? Infinity) - (b.pengembalian?.batch ?? Infinity) ||
+    badgeNum(a.pengembalian?.peserta?.no_badge) - badgeNum(b.pengembalian?.peserta?.no_badge);
   const sections: { dept: string; rows: Row[] }[] = DEPARTEMEN.map((dName) => ({
     dept: dName as string,
     rows: rows
       .filter((r) => (r.pengembalian?.peserta?.departemen ?? "") === dName)
-      .sort((a, b) => badgeNum(a.pengembalian?.peserta?.no_badge) - badgeNum(b.pengembalian?.peserta?.no_badge)),
+      .sort(rowSort),
   })).filter((s) => s.rows.length > 0);
 
   // baris tanpa departemen (seharusnya jarang/tidak ada) - tampilkan sebagai section terakhir
   const tanpaDivisi = rows
     .filter((r) => !r.pengembalian?.peserta?.departemen)
-    .sort((a, b) => badgeNum(a.pengembalian?.peserta?.no_badge) - badgeNum(b.pengembalian?.peserta?.no_badge));
+    .sort(rowSort);
   if (tanpaDivisi.length > 0) sections.push({ dept: "Tanpa Divisi", rows: tanpaDivisi });
 
   const grandTotal = rows.length;
