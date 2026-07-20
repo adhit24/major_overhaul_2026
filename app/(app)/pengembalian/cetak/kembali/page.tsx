@@ -24,15 +24,14 @@ type Row = {
   } | null;
 };
 
-const batchLabel = (b: number | null | undefined) =>
-  b === 1 ? "Batch 1" : b === 2 ? "Batch 2" : `Batch ${b ?? "-"}`;
+const batchLabel = (b: number | null | undefined) => (b != null ? `Batch ${b}` : "Batch -");
 
 export default async function CetakKembaliPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; dept?: string }>;
+  searchParams: Promise<{ q?: string; dept?: string; batch?: string }>;
 }) {
-  const { q, dept } = await searchParams;
+  const { q, dept, batch } = await searchParams;
   const supabase = await createClient();
 
   const { data } = await supabase
@@ -42,13 +41,30 @@ export default async function CetakKembaliPage({
     .neq("kondisi", "HILANG");
 
   const qLower = (q ?? "").toLowerCase();
-  const rows = ((data ?? []) as unknown as Row[]).filter((r) => {
+  // Filter dept/pencarian dulu (lepas dari batch) supaya daftar tab batch yang tersedia
+  // tetap mencerminkan hasil pencarian/divisi yang sedang aktif.
+  const rowsBeforeBatch = ((data ?? []) as unknown as Row[]).filter((r) => {
     const p = r.pengembalian?.peserta;
     if (!p) return false;
     if (dept && p.departemen !== dept) return false;
     if (qLower && !(`${p.nama} ${p.no_badge ?? ""} ${p.no_erp ?? ""}`.toLowerCase().includes(qLower))) return false;
     return true;
   });
+
+  // Tab batch diturunkan dari data yang benar-benar ada (bukan hardcode 1/2) supaya
+  // batch 3, 4, dst otomatis muncul begitu ada pengembalian dengan batch tsb.
+  const availableBatches = [...new Set(rowsBeforeBatch.map((r) => r.pengembalian?.batch).filter((b): b is number => b != null))].sort((a, b) => a - b);
+  const batchFilter = batch ? Number(batch) : null;
+  const rows = batchFilter == null ? rowsBeforeBatch : rowsBeforeBatch.filter((r) => r.pengembalian?.batch === batchFilter);
+
+  const tabHref = (b: number | null) => {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (dept) params.set("dept", dept);
+    if (b != null) params.set("batch", String(b));
+    const qs = params.toString();
+    return `/pengembalian/cetak/kembali${qs ? `?${qs}` : ""}`;
+  };
 
   // Satu SECTION per departemen (urutan bisnis DEPARTEMEN), tiap section diurutkan
   // urutan (No) ascending - itu sudah per-departemen sejak migrasi 2026-07-15.
@@ -72,7 +88,24 @@ export default async function CetakKembaliPage({
     <main className="mx-auto max-w-5xl bg-white p-8 text-slate-900 print:p-0">
       <style>{"@media print { @page { size: A4 portrait; margin: 12mm; } }"}</style>
 
-      <div className="mb-4 flex justify-end print:hidden">
+      <div className="mb-4 flex items-center justify-between gap-3 print:hidden">
+        <nav className="flex flex-wrap gap-1.5">
+          <a
+            href={tabHref(null)}
+            className={`rounded-md px-3 py-1.5 text-xs font-semibold ${batchFilter == null ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+          >
+            Semua Batch
+          </a>
+          {availableBatches.map((b) => (
+            <a
+              key={b}
+              href={tabHref(b)}
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold ${batchFilter === b ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+            >
+              Batch {b} — Cetak
+            </a>
+          ))}
+        </nav>
         <PrintButton />
       </div>
 
@@ -80,7 +113,7 @@ export default async function CetakKembaliPage({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logos/logo_cps_transparent.png" alt="Cirebon Power" className="h-12 w-auto object-contain" />
         <div className="text-center">
-          <h1 className="text-lg font-bold">DAFTAR PENGEMBALIAN ID CARD</h1>
+          <h1 className="text-lg font-bold">DAFTAR PENGEMBALIAN ID CARD{batchFilter != null ? ` — BATCH ${batchFilter}` : ""}</h1>
           <p className="text-sm">PT. JO Koin One Plant — Dicetak: {dicetak}</p>
         </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -88,6 +121,7 @@ export default async function CetakKembaliPage({
       </header>
 
       <div className="mt-3 text-xs text-slate-500">
+        {batchFilter != null && <>Batch: <b>{batchFilter}</b> · </>}
         {dept && <>Divisi: <b>{dept}</b> · </>}
         {q && <>Cari: &quot;{q}&quot; · </>}
         Total: <b>{grandTotal}</b> kartu
@@ -161,8 +195,8 @@ export default async function CetakKembaliPage({
       <div className="mt-6 text-xs text-slate-600" style={{ breakInside: "avoid" }}>
         <p className="font-semibold">Catatan:</p>
         <ol className="ml-4 list-decimal space-y-0.5">
-          <li>Batch 1 = data pengembalian yang sudah dikunci per 15 Juli 2026.</li>
-          <li>Batch 2 = pengembalian mulai 18 Juli 2026, nomor urut lanjut otomatis per departemen (tidak mengulang dari 1).</li>
+          <li>Batch = kelompok periode pencatatan pengembalian (Batch 1, 2, 3, dst — bertambah seiring waktu). Setiap batch yang sudah tercetak/dikunci tidak pernah dinomori ulang.</li>
+          <li>Nomor urut (No) berjalan berkelanjutan per departemen lintas semua batch — batch berikutnya melanjutkan nomor dari batch sebelumnya, tidak mengulang dari 1.</li>
         </ol>
       </div>
     </main>

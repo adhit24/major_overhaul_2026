@@ -70,8 +70,7 @@ export default async function PengembalianPage({
     const n = Number(badge);
     return Number.isFinite(n) && badge ? n : Infinity;
   };
-  const batchLabel = (b: number | null | undefined) =>
-    b === 1 ? "Batch 1 (dikunci)" : b === 2 ? "Batch 2 — mulai 18 Juli 2026" : `Batch ${b ?? "-"}`;
+  const batchLabel = (b: number | null | undefined) => (b != null ? `Batch ${b}` : "Batch -");
 
   const rugiRows = ((rugiRes.data ?? []) as unknown as RugiRow[])
     .slice()
@@ -155,7 +154,7 @@ export default async function PengembalianPage({
       nama: p?.nama ?? "-",
       pin: p?.no_erp ?? "-",
       departemen: p?.departemen ?? "Tanpa Divisi",
-      batch: b === 1 ? "Batch 1" : b === 2 ? "Batch 2" : `Batch ${b ?? "-"}`,
+      batch: b != null ? `Batch ${b}` : "Batch -",
       jabatan: p?.jabatan_deskripsi ?? "-",
       kondisi: r.kondisi,
       tanggal: r.pengembalian?.tanggal ?? "-",
