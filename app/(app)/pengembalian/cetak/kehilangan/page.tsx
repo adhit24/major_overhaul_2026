@@ -131,8 +131,12 @@ export default async function CetakKehilanganPage({
       {sections.map((section, si) => {
         const subtotalPotongan = section.rows.reduce((s, r) => s + Number(r.potongan), 0);
         return (
-          <section key={section.dept} className="mt-6" style={{ breakInside: "avoid" }}>
-            <h2 className="bg-slate-800 px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-white">
+          // Section bisa berisi banyak baris (beberapa halaman) - jangan breakInside:avoid di
+          // sini, itu justru mendorong SELURUH section ke halaman baru kalau tidak muat di sisa
+          // halaman manapun, meninggalkan halaman sebelumnya kosong. Per-baris (<tr>) yang perlu
+          // dijaga tetap utuh, itu sudah ditangani di bawah.
+          <section key={section.dept} className="mt-6">
+            <h2 className="bg-slate-800 px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-white" style={{ breakAfter: "avoid" }}>
               SECTION {si + 1}: {section.dept}
             </h2>
             <table className="w-full table-fixed border-collapse text-[11px]">
