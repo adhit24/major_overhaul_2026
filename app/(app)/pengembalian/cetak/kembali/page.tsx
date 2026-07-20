@@ -68,19 +68,24 @@ export default async function CetakKembaliPage({
     return `/pengembalian/cetak/kembali${qs ? `?${qs}` : ""}`;
   };
 
-  // Satu SECTION per departemen (urutan bisnis DEPARTEMEN), tiap section diurutkan
-  // urutan (No) ascending - itu sudah per-departemen sejak migrasi 2026-07-15.
+  // Satu SECTION per departemen (urutan bisnis DEPARTEMEN), tiap section diurutkan dari
+  // No Badge terkecil ke terbesar (bukan urutan/No pencatatan) - No tetap ditampilkan apa
+  // adanya di kolomnya masing-masing untuk ketertelusuran, cuma urutan barisnya yang ikut badge.
+  const badgeNum = (badge: string | null | undefined) => {
+    const n = Number(badge);
+    return Number.isFinite(n) && badge ? n : Infinity;
+  };
   const sections: { dept: string; rows: Row[] }[] = DEPARTEMEN.map((dName) => ({
     dept: dName as string,
     rows: rows
       .filter((r) => (r.pengembalian?.peserta?.departemen ?? "") === dName)
-      .sort((a, b) => (a.pengembalian?.urutan ?? Infinity) - (b.pengembalian?.urutan ?? Infinity)),
+      .sort((a, b) => badgeNum(a.pengembalian?.peserta?.no_badge) - badgeNum(b.pengembalian?.peserta?.no_badge)),
   })).filter((s) => s.rows.length > 0);
 
   // baris tanpa departemen (seharusnya jarang/tidak ada) - tampilkan sebagai section terakhir
   const tanpaDivisi = rows
     .filter((r) => !r.pengembalian?.peserta?.departemen)
-    .sort((a, b) => (a.pengembalian?.urutan ?? Infinity) - (b.pengembalian?.urutan ?? Infinity));
+    .sort((a, b) => badgeNum(a.pengembalian?.peserta?.no_badge) - badgeNum(b.pengembalian?.peserta?.no_badge));
   if (tanpaDivisi.length > 0) sections.push({ dept: "Tanpa Divisi", rows: tanpaDivisi });
 
   const grandTotal = rows.length;
@@ -198,7 +203,7 @@ export default async function CetakKembaliPage({
         <p className="font-semibold">Catatan:</p>
         <ol className="ml-4 list-decimal space-y-0.5">
           <li>Batch = kelompok periode pencatatan pengembalian (Batch 1, 2, 3, dst — bertambah seiring waktu). Setiap batch yang sudah tercetak/dikunci tidak pernah dinomori ulang.</li>
-          <li>Nomor urut (No) berjalan berkelanjutan per departemen lintas semua batch — batch berikutnya melanjutkan nomor dari batch sebelumnya, tidak mengulang dari 1.</li>
+          <li>Nomor urut (No) berjalan berkelanjutan per departemen lintas semua batch — batch berikutnya melanjutkan nomor dari batch sebelumnya, tidak mengulang dari 1. Baris diurutkan dari No Badge terkecil ke terbesar, jadi urutan No pada kolom bisa tidak berurutan.</li>
         </ol>
       </div>
     </main>
