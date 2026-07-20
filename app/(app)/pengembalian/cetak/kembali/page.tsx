@@ -34,11 +34,13 @@ export default async function CetakKembaliPage({
   const { q, dept, batch } = await searchParams;
   const supabase = await createClient();
 
+  // Termasuk KARTU kondisi HILANG - nomor urut (No) adalah penomoran fisik/administratif
+  // yang harus tetap berkelanjutan tanpa lubang di daftar cetak, bukan cuma untuk kartu yang
+  // secara fisik kembali. Kondisi tiap baris tetap tampil di kolom Kondisi.
   const { data } = await supabase
     .from("pengembalian_detail")
     .select("kondisi, pengembalian(tanggal, petugas, batch, urutan, departemen, peserta(id, nama, no_badge, no_erp, departemen, jabatan_deskripsi))")
-    .eq("item", "KARTU")
-    .neq("kondisi", "HILANG");
+    .eq("item", "KARTU");
 
   const qLower = (q ?? "").toLowerCase();
   // Filter dept/pencarian dulu (lepas dari batch) supaya daftar tab batch yang tersedia

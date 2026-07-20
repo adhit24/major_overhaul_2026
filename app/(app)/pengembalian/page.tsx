@@ -44,11 +44,13 @@ export default async function PengembalianPage({
       .select("item, kondisi, potongan, pengembalian(id, tanggal, petugas, peserta(id, nama, no_badge, departemen))")
       .neq("kondisi", "KEMBALI")
       .order("potongan", { ascending: false }),
+    // Termasuk KARTU kondisi HILANG - nomor urut (No/urutan) adalah penomoran fisik/
+    // administratif yang harus tetap berkelanjutan tanpa lubang, bukan cuma kartu yang
+    // secara fisik kembali (kartu HILANG juga tetap muncul di Daftar Kehilangan di bawah).
     supabase
       .from("pengembalian_detail")
       .select("kondisi, potongan, pengembalian(id, tanggal, petugas, is_migrasi, batch, urutan, peserta(id, nama, no_badge, no_erp, departemen, jabatan_deskripsi))")
-      .eq("item", "KARTU")
-      .neq("kondisi", "HILANG"),
+      .eq("item", "KARTU"),
   ]);
   const peserta = [...(p1.data ?? []), ...(p2.data ?? [])];
   const kejadian = [...(g1.data ?? []), ...(g2.data ?? [])];
