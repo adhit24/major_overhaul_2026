@@ -20,7 +20,7 @@ export default async function DashboardPage() {
   // pengembalian) WAJIB dipecah 2 batch range(0,999)+range(1000,1999), pola yang
   // sama dipakai di app/(app)/manpower/page.tsx.
   const [
-    totalBadgeTervalidasi, totalPending, totalPerluVerifikasi, deposits, recentPeserta,
+    totalBadgeTervalidasi, deposits, recentPeserta,
     pengembalian1, pengembalian2, wajibKembali1, wajibKembali2,
   ] = await Promise.all([
     supabase
@@ -28,8 +28,6 @@ export default async function DashboardPage() {
       .select("*", { count: "exact", head: true })
       .eq("tervalidasi_induction", true)
       .not("no_badge", "is", null),
-    supabase.from("peserta").select("*", { count: "exact", head: true }).eq("status_badge", "PENDING"),
-    supabase.from("peserta").select("*", { count: "exact", head: true }).is("departemen", null),
     supabase.from("deposit_batch").select("jumlah_kartu, total_deposit, status_batch"),
     supabase
       .from("peserta")
@@ -69,6 +67,7 @@ export default async function DashboardPage() {
   }
   const nLengkap = [...itemsByPeserta.values()].filter((s) => APD_ITEMS.every((i) => s.has(i))).length;
   const nKartuKembali = [...kartuKondisiByPeserta.values()].filter((k) => k !== "HILANG").length;
+  const nKartuTersisa = Math.max(validIds.size - nKartuKembali, 0);
 
   return (
     <>
@@ -78,16 +77,18 @@ export default async function DashboardPage() {
           <StatCard label="Total Kartu Diajukan" value={totalKartu} hint="batch DONE" />
           <StatCard label="Sudah Ada Badge" value={totalBadgeValid} tone="success" />
           <StatCard
-            label="Belum Ada Badge (PENDING)"
-            value={totalPending.count ?? 0}
-            tone={totalPending.count ? "warning" : "default"}
+            label="ID Badge Sudah Kembali"
+            value={nKartuKembali}
+            tone="success"
+            hint="Kartu fisik sudah kembali"
+            href="/pengembalian"
           />
           <StatCard
-            label="Departemen Perlu Verifikasi"
-            value={totalPerluVerifikasi.count ?? 0}
-            tone={totalPerluVerifikasi.count ? "warning" : "default"}
-            hint="Klik untuk lihat daftarnya"
-            href="/peserta?departemen=__PERLU_VERIFIKASI__"
+            label="ID Badge Tersisa"
+            value={nKartuTersisa}
+            tone={nKartuTersisa ? "warning" : "default"}
+            hint="Belum tercatat kembali"
+            href="/pengembalian"
           />
           <StatCard label="Total Deposit Tercatat" value={formatRupiah(totalDeposit)} hint={`${doneBatches.length} batch DONE`} />
           <StatCard
