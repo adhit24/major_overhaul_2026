@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { TopBar } from "@/components/TopBar";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
-import { APD_ITEMS } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
@@ -52,22 +51,19 @@ export default async function DashboardPage() {
   const doneBatches  = allBatches.filter((b) => b.status_batch === "DONE");
   const totalKartu   = doneBatches.reduce((s, b) => s + Number(b.jumlah_kartu ?? 0), 0);
   const totalDeposit = doneBatches.reduce((sum, row) => sum + Number(row.total_deposit ?? 0), 0);
+  const tarifKartuRata = totalKartu > 0 ? totalDeposit / totalKartu : 50000;
 
   const validIds = new Set((totalWajibKembali.data ?? []).map((r) => r.id));
-  const itemsByPeserta = new Map<number, Set<string>>();
   const kartuKondisiByPeserta = new Map<number, string>();
   for (const g of pengembalianRes.data ?? []) {
     if (!validIds.has(g.peserta_id)) continue;
-    const set = itemsByPeserta.get(g.peserta_id) ?? new Set<string>();
     for (const d of (g.pengembalian_detail as { item: string; kondisi: string }[] | null) ?? []) {
-      set.add(d.item);
       if (d.item === "KARTU") kartuKondisiByPeserta.set(g.peserta_id, d.kondisi);
     }
-    itemsByPeserta.set(g.peserta_id, set);
   }
-  const nLengkap = [...itemsByPeserta.values()].filter((s) => APD_ITEMS.every((i) => s.has(i))).length;
   const nKartuKembali = [...kartuKondisiByPeserta.values()].filter((k) => k !== "HILANG").length;
   const nKartuTersisa = Math.max(validIds.size - nKartuKembali, 0);
+  const nominalSisaPengembalian = nKartuTersisa * tarifKartuRata;
 
   return (
     <>
@@ -92,11 +88,11 @@ export default async function DashboardPage() {
           />
           <StatCard label="Total Deposit Tercatat" value={formatRupiah(totalDeposit)} hint={`${doneBatches.length} batch DONE`} />
           <StatCard
-            label="ID Card Dikembalikan"
-            value={`${nKartuKembali} / ${validIds.size}`}
-            tone="success"
-            hint={`${nLengkap} set APD lengkap · klik untuk detail`}
-            href="/pengembalian"
+            label="Nominal Sisa Pengembalian"
+            value={formatRupiah(nominalSisaPengembalian)}
+            tone={nominalSisaPengembalian > 0 ? "warning" : "default"}
+            hint={`${nKartuTersisa} ID badge tersisa`}
+            href="/deposit"
           />
         </div>
 
