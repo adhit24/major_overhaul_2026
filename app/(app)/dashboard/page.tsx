@@ -62,7 +62,7 @@ export default async function DashboardPage() {
     }
   }
   const nKartuKembali = [...kartuKondisiByPeserta.values()].filter((k) => k !== "HILANG").length;
-  const nKartuTersisa = Math.max(validIds.size - nKartuKembali, 0);
+  const nKartuTersisa = Math.max(totalKartu - nKartuKembali, 0);
   const nominalSisaPengembalian = nKartuTersisa * tarifKartuRata;
 
   return (

@@ -36,35 +36,53 @@ export default async function DepositPage({
   const doneKartu    = doneBatches.reduce((s, b) => s + Number(b.jumlah_kartu ?? 0), 0);
   const doneDeposit  = doneBatches.reduce((s, b) => s + Number(b.total_deposit ?? 0), 0);
 
-  const { data: potonganRows } = await supabase.from("pengembalian_detail").select("potongan").range(0, 1999);
+  const [potongan1, potongan2] = await Promise.all([
+    supabase.from("pengembalian_detail").select("potongan").range(0, 999),
+    supabase.from("pengembalian_detail").select("potongan").range(1000, 1999),
+  ]);
+  const potonganRows = [...(potongan1.data ?? []), ...(potongan2.data ?? [])];
   const totalPotongan = (potonganRows ?? []).reduce((s, r) => s + Number(r.potongan), 0);
 
   // Summary Pengembalian ID Card - jumlah kartu yang sudah dikembalikan, dipecah per
-  // departemen x batch (Batch 1 = dikunci, Batch 2 = mulai 18 Juli 2026, nomor lanjut per
-  // departemen). Query ringan (cuma hitung), detail lengkap & cetak/export ada di /pengembalian.
-  const { data: kembaliRows } = await supabase
-    .from("pengembalian_detail")
-    .select("pengembalian(departemen, batch)")
-    .eq("item", "KARTU")
-    .neq("kondisi", "HILANG");
+  // departemen x batch. Batch baru otomatis muncul mengikuti label batch dari pencatatan.
+  const [kembali1, kembali2] = await Promise.all([
+    supabase
+      .from("pengembalian_detail")
+      .select("pengembalian(departemen, batch)")
+      .eq("item", "KARTU")
+      .neq("kondisi", "HILANG")
+      .range(0, 999),
+    supabase
+      .from("pengembalian_detail")
+      .select("pengembalian(departemen, batch)")
+      .eq("item", "KARTU")
+      .neq("kondisi", "HILANG")
+      .range(1000, 1999),
+  ]);
+  const kembaliRows = [...(kembali1.data ?? []), ...(kembali2.data ?? [])];
 
   type KembaliCount = { departemen: string | null; batch: number | null };
-  const perDeptBatch = new Map<string, { batch1: number; batch2: number }>();
+  const perDeptBatch = new Map<string, Map<number, number>>();
+  const batchSet = new Set<number>();
   for (const r of (kembaliRows ?? []) as unknown as { pengembalian: KembaliCount | null }[]) {
     const dept = r.pengembalian?.departemen ?? "Tanpa Divisi";
     const b = r.pengembalian?.batch;
-    const row = perDeptBatch.get(dept) ?? { batch1: 0, batch2: 0 };
-    if (b === 1) row.batch1 += 1;
-    else if (b === 2) row.batch2 += 1;
+    if (b == null) continue;
+    batchSet.add(b);
+    const row = perDeptBatch.get(dept) ?? new Map<number, number>();
+    row.set(b, (row.get(b) ?? 0) + 1);
     perDeptBatch.set(dept, row);
   }
+  const availableBatches = [...batchSet].sort((a, b) => a - b);
   const deptOrder = [...DEPARTEMEN, "Tanpa Divisi"];
   const kembaliBreakdown = deptOrder
     .filter((d) => perDeptBatch.has(d))
-    .map((d) => ({ dept: d, ...perDeptBatch.get(d)! }));
-  const totalKembaliBatch1 = kembaliBreakdown.reduce((s, r) => s + r.batch1, 0);
-  const totalKembaliBatch2 = kembaliBreakdown.reduce((s, r) => s + r.batch2, 0);
-  const totalKembali = totalKembaliBatch1 + totalKembaliBatch2;
+    .map((d) => ({ dept: d, batches: perDeptBatch.get(d)! }));
+  const totalKembaliByBatch = new Map<number, number>();
+  for (const b of availableBatches) {
+    totalKembaliByBatch.set(b, kembaliBreakdown.reduce((s, r) => s + (r.batches.get(b) ?? 0), 0));
+  }
+  const totalKembali = [...totalKembaliByBatch.values()].reduce((s, v) => s + v, 0);
 
   // Standing Dana Deposit di CPS - ledger transaksi pengembalian dana dari CPS,
   // dibandingkan terhadap total deposit (per departemen & total) dan terhadap
@@ -90,7 +108,7 @@ export default async function DepositPage({
 
   const kartuKembaliByDept = new Map<string, number>();
   for (const r of kembaliBreakdown) {
-    kartuKembaliByDept.set(r.dept, r.batch1 + r.batch2);
+    kartuKembaliByDept.set(r.dept, [...r.batches.values()].reduce((s, v) => s + v, 0));
   }
 
   const cpsBreakdown = deptOrder
@@ -368,19 +386,17 @@ export default async function DepositPage({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 p-5">
+          <div className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-3">
             <div className="text-center">
               <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Dikembalikan</p>
               <p className="mt-2 text-2xl font-bold text-slate-800">{totalKembali}</p>
             </div>
-            <div className="text-center">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Batch 1 (dikunci)</p>
-              <p className="mt-2 text-2xl font-bold text-slate-800">{totalKembaliBatch1}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Batch 2 (mulai 18 Jul)</p>
-              <p className="mt-2 text-2xl font-bold text-emerald-600">{totalKembaliBatch2}</p>
-            </div>
+            {availableBatches.slice(-2).map((b) => (
+              <div key={b} className="text-center">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Batch {b}</p>
+                <p className="mt-2 text-2xl font-bold text-emerald-600">{totalKembaliByBatch.get(b) ?? 0}</p>
+              </div>
+            ))}
           </div>
 
           <div className="overflow-x-auto border-t border-slate-100">
@@ -388,8 +404,9 @@ export default async function DepositPage({
               <thead>
                 <tr className="bg-slate-50 text-xs uppercase tracking-wider text-slate-400">
                   <th className="px-3 py-3 text-left font-semibold sm:px-5">Departemen</th>
-                  <th className="px-2 py-3 text-right font-semibold sm:px-4">Batch 1</th>
-                  <th className="px-2 py-3 text-right font-semibold sm:px-4">Batch 2</th>
+                  {availableBatches.map((b) => (
+                    <th key={b} className="px-2 py-3 text-right font-semibold sm:px-4">Batch {b}</th>
+                  ))}
                   <th className="px-3 py-3 text-right font-semibold sm:px-4">Total</th>
                 </tr>
               </thead>
@@ -397,14 +414,19 @@ export default async function DepositPage({
                 {kembaliBreakdown.map((r) => (
                   <tr key={r.dept}>
                     <td className="px-3 py-2.5 text-slate-700 sm:px-5">{r.dept}</td>
-                    <td className="px-2 py-2.5 text-right tabular-nums text-slate-600 sm:px-4">{r.batch1 || "-"}</td>
-                    <td className="px-2 py-2.5 text-right tabular-nums text-slate-600 sm:px-4">{r.batch2 || "-"}</td>
-                    <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-slate-800 sm:px-4">{r.batch1 + r.batch2}</td>
+                    {availableBatches.map((b) => (
+                      <td key={b} className="px-2 py-2.5 text-right tabular-nums text-slate-600 sm:px-4">
+                        {r.batches.get(b) || "-"}
+                      </td>
+                    ))}
+                    <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-slate-800 sm:px-4">
+                      {[...r.batches.values()].reduce((s, v) => s + v, 0)}
+                    </td>
                   </tr>
                 ))}
                 {kembaliBreakdown.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-5 py-8 text-center text-slate-400 text-sm">
+                    <td colSpan={availableBatches.length + 2} className="px-5 py-8 text-center text-slate-400 text-sm">
                       Belum ada ID Card yang dikembalikan.
                     </td>
                   </tr>
@@ -414,8 +436,11 @@ export default async function DepositPage({
                 <tfoot>
                   <tr className="bg-slate-100 border-t-2 border-slate-200 font-semibold text-slate-700">
                     <td className="px-3 py-3 sm:px-5">Total Keseluruhan</td>
-                    <td className="px-2 py-3 text-right tabular-nums sm:px-4">{totalKembaliBatch1}</td>
-                    <td className="px-2 py-3 text-right tabular-nums sm:px-4">{totalKembaliBatch2}</td>
+                    {availableBatches.map((b) => (
+                      <td key={b} className="px-2 py-3 text-right tabular-nums sm:px-4">
+                        {totalKembaliByBatch.get(b) ?? 0}
+                      </td>
+                    ))}
                     <td className="px-3 py-3 text-right tabular-nums sm:px-4">{totalKembali}</td>
                   </tr>
                 </tfoot>

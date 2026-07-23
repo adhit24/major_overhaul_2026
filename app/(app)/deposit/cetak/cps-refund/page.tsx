@@ -33,11 +33,21 @@ export default async function CetakCpsRefundPage() {
     .order("departemen", { ascending: true })
     .order("tanggal", { ascending: true });
 
-  const { data: kembaliRows } = await supabase
-    .from("pengembalian_detail")
-    .select("pengembalian(departemen)")
-    .eq("item", "KARTU")
-    .neq("kondisi", "HILANG");
+  const [kembali1, kembali2] = await Promise.all([
+    supabase
+      .from("pengembalian_detail")
+      .select("pengembalian(departemen)")
+      .eq("item", "KARTU")
+      .neq("kondisi", "HILANG")
+      .range(0, 999),
+    supabase
+      .from("pengembalian_detail")
+      .select("pengembalian(departemen)")
+      .eq("item", "KARTU")
+      .neq("kondisi", "HILANG")
+      .range(1000, 1999),
+  ]);
+  const kembaliRows = [...(kembali1.data ?? []), ...(kembali2.data ?? [])];
 
   const depositByDept = new Map<string, number>();
   for (const b of batches ?? []) {
