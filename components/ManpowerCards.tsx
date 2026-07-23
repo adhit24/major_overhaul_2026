@@ -45,6 +45,7 @@ export function ManpowerCards({
         const style      = DEPT_STYLE[dept] ?? DEPT_STYLE['SUPPORTING'];
         const isSelected = selectedDept === dept;
         const pct        = totalAll > 0 ? Math.round((total / totalAll) * 100) : 0;
+        const remaining  = Math.max(total - returned, 0);
 
         return (
           <motion.div
@@ -74,6 +75,9 @@ export function ManpowerCards({
               {/* Number */}
               <p className={`text-3xl font-black tabular-nums leading-none ${style.num}`}>{total}</p>
               <p className="mt-0.5 text-[10px] font-medium text-slate-400">orang</p>
+              <p className="mt-1 text-[10px] font-bold text-slate-600">
+                Sisa manpower: <span className="tabular-nums">{remaining}</span>
+              </p>
 
               {/* Progress bar */}
               <div className="mt-2.5 h-1 w-full rounded-full bg-black/5">

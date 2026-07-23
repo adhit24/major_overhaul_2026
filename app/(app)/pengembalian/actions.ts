@@ -11,10 +11,19 @@ import { APD_ITEMS, KONDISI_ITEM, type ApdItem } from "@/lib/constants";
 const BATCH_CUTOFFS: { through: string; batch: number }[] = [
   { through: "2026-07-15", batch: 1 },
   { through: "2026-07-20", batch: 2 },
+  { through: "2026-07-23", batch: 3 },
 ];
 function batchForTanggal(tanggal: string): number {
   for (const c of BATCH_CUTOFFS) if (tanggal <= c.through) return c.batch;
   return BATCH_CUTOFFS[BATCH_CUTOFFS.length - 1].batch + 1;
+}
+
+function isLockedBatch(batch: number | null | undefined): batch is number {
+  return batch != null && BATCH_CUTOFFS.some((c) => c.batch === batch);
+}
+
+function lockedBatchError(batch: number) {
+  return `Batch ${batch} sudah ditutup/dikunci. Data di batch terkunci tidak bisa ditambah, diedit, dibatalkan, atau dihapus.`;
 }
 
 // Kartu HILANG tidak memakai slot urutan (lihat catatPengembalian). Untuk kartu yang
@@ -27,6 +36,8 @@ async function renumberBatchByBadge(
   departemen: string | null,
   batch: number
 ) {
+  if (isLockedBatch(batch)) return;
+
   let q = supabase
     .from("pengembalian")
     .select("id, urutan, peserta(no_badge), pengembalian_detail(item, kondisi)")
@@ -128,9 +139,14 @@ export async function catatPengembalian(formData: FormData) {
   // dihitung SETELAH insert lewat renumberBatchByBadge (badge terkecil -> terbesar per
   // departemen dalam batch itu) - kartu HILANG tetap dapat label batch tapi tidak dinomori.
   const kartuItem = items.find((i) => i.item === "KARTU");
-  const batchFields: { batch: number; departemen: string | null } | { departemen: string | null } = kartuItem
-    ? { batch: batchForTanggal(tanggal), departemen: peserta.departemen }
-    : { departemen: peserta.departemen };
+  let batchFields: { batch: number; departemen: string | null } | { departemen: string | null };
+  if (kartuItem) {
+    const batchKartu = batchForTanggal(tanggal);
+    if (isLockedBatch(batchKartu)) return { error: lockedBatchError(batchKartu) };
+    batchFields = { batch: batchKartu, departemen: peserta.departemen };
+  } else {
+    batchFields = { departemen: peserta.departemen };
+  }
 
   const { data: kejadian, error: insErr } = await supabase
     .from("pengembalian")
@@ -174,22 +190,23 @@ export async function updatePengembalianDetail(formData: FormData) {
 
   const supabase = await createClient();
 
-  // Kartu HILANG tidak memakai slot urutan (lihat catatPengembalian) - kalau kondisi KARTU
-  // diubah masuk/keluar dari HILANG lewat edit, lepas atau berikan slot urutan supaya aturan
-  // itu tetap konsisten, bukan cuma berlaku saat input pertama. Perlu tahu kondisi LAMA-nya
-  // dulu (sebelum di-update) untuk tahu ini transisi ke arah mana.
+  // Perlu tahu kondisi/batch lama sebelum update supaya batch yang sudah ditutup benar-benar
+  // tidak berubah lewat jalur edit.
   let oldKondisi: string | undefined;
   let g: { urutan: number | null; departemen: string | null; batch: number | null } | null = null;
   let pengembalianId: number | undefined;
-  if (item === "KARTU") {
-    const { data: detailRow } = await supabase
-      .from("pengembalian_detail")
-      .select("kondisi, pengembalian_id, pengembalian(urutan, departemen, batch)")
-      .eq("id", detailId)
-      .single();
-    oldKondisi = detailRow?.kondisi;
-    pengembalianId = detailRow?.pengembalian_id;
-    g = detailRow?.pengembalian as unknown as { urutan: number | null; departemen: string | null; batch: number | null } | null;
+  const { data: detailRow } = await supabase
+    .from("pengembalian_detail")
+    .select("kondisi, pengembalian_id, pengembalian(urutan, departemen, batch)")
+    .eq("id", detailId)
+    .single();
+  if (!detailRow) return { error: "Data pengembalian tidak ditemukan." };
+
+  oldKondisi = detailRow.kondisi;
+  pengembalianId = detailRow.pengembalian_id;
+  g = detailRow.pengembalian as unknown as { urutan: number | null; departemen: string | null; batch: number | null } | null;
+  if (isLockedBatch(g?.batch)) {
+    return { error: lockedBatchError(g.batch) };
   }
 
   const { error } = await supabase
@@ -202,8 +219,13 @@ export async function updatePengembalianDetail(formData: FormData) {
     const newStatus = kondisi === "HILANG" ? "HANGUS" : "RETURNED";
     await supabase.from("peserta").update({ status_badge: newStatus }).eq("id", pesertaId);
 
-    if (oldKondisi && oldKondisi !== "HILANG" && kondisi === "HILANG" && g?.urutan != null && pengembalianId) {
-      await supabase.from("pengembalian").update({ urutan: null }).eq("id", pengembalianId);
+    if (oldKondisi && oldKondisi !== "HILANG" && kondisi === "HILANG" && pengembalianId) {
+      if (g?.urutan != null) {
+        await supabase.from("pengembalian").update({ urutan: null }).eq("id", pengembalianId);
+      }
+      if (g?.batch != null) {
+        await renumberBatchByBadge(supabase, g.departemen, g.batch);
+      }
     } else if (oldKondisi === "HILANG" && kondisi !== "HILANG" && g?.batch != null) {
       // kondisi pengembalian_detail sudah ter-update di atas, jadi renumberBatchByBadge
       // sekarang akan menganggap baris ini layak dinomori dan menyisipkannya di posisi
@@ -226,10 +248,14 @@ export async function batalkanPengembalianDetail(formData: FormData) {
 
   const { data: detailRow } = await supabase
     .from("pengembalian_detail")
-    .select("id, pengembalian_id")
+    .select("id, pengembalian_id, kondisi, pengembalian(departemen, batch)")
     .eq("id", detailId)
     .single();
   if (!detailRow) return { error: "Data pengembalian tidak ditemukan." };
+  const g = detailRow.pengembalian as unknown as { departemen: string | null; batch: number | null } | null;
+  if (isLockedBatch(g?.batch)) {
+    return { error: lockedBatchError(g.batch) };
+  }
 
   const { error: delErr } = await supabase.from("pengembalian_detail").delete().eq("id", detailId);
   if (delErr) return { error: delErr.message };
@@ -250,6 +276,9 @@ export async function batalkanPengembalianDetail(formData: FormData) {
 
   if (item === "KARTU") {
     await supabase.from("peserta").update({ status_badge: "ACTIVE" }).eq("id", pesertaId);
+    if (g?.batch != null && detailRow.kondisi !== "HILANG") {
+      await renumberBatchByBadge(supabase, g.departemen, g.batch);
+    }
   }
 
   revalidateAll();
@@ -265,9 +294,19 @@ export async function hapusPengembalian(formData: FormData) {
 
   const { data: detail } = await supabase
     .from("pengembalian_detail")
-    .select("item")
+    .select("item, kondisi")
     .eq("pengembalian_id", pengembalianId);
   const punyaKartu = (detail ?? []).some((d) => d.item === "KARTU");
+  const kartuDinomori = (detail ?? []).some((d) => d.item === "KARTU" && d.kondisi !== "HILANG");
+  const { data: pengembalianRow } = await supabase
+    .from("pengembalian")
+    .select("departemen, batch")
+    .eq("id", pengembalianId)
+    .single();
+  const lockedRow = pengembalianRow as { departemen: string | null; batch: number | null } | null;
+  if (isLockedBatch(lockedRow?.batch)) {
+    return { error: lockedBatchError(lockedRow.batch) };
+  }
 
   const { error } = await supabase.from("pengembalian").delete().eq("id", pengembalianId);
   if (error) return { error: error.message };
@@ -283,6 +322,10 @@ export async function hapusPengembalian(formData: FormData) {
     );
     if (!masihAdaKartu) {
       await supabase.from("peserta").update({ status_badge: "ACTIVE" }).eq("id", pesertaId);
+    }
+    const g = pengembalianRow as { departemen: string | null; batch: number | null } | null;
+    if (kartuDinomori && g?.batch != null) {
+      await renumberBatchByBadge(supabase, g.departemen, g.batch);
     }
   }
 
