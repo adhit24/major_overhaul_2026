@@ -5,7 +5,7 @@ import { TopBar } from "@/components/TopBar";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { KondisiBadge } from "@/components/KondisiBadge";
-import { ExportPdfButton, type ExportPdfRow } from "@/components/ExportPdfButton";
+import { ExportExcelButton, type ExportExcelRow } from "@/components/ExportExcelButton";
 import { TarifCard } from "@/components/TarifCard";
 import { CatatPengembalianButton } from "@/components/CatatPengembalianModal";
 import { computeStatusPengembalian, formatPetugas, formatRupiah } from "@/lib/pengembalian";
@@ -149,7 +149,7 @@ export default async function PengembalianPage({
   // urutan kartuRows biasa - filteredKartuRows sudah diurutkan begitu sejak Task 3, jadi tinggal
   // dipetakan langsung. Label batch di PDF singkat ("Batch 1"/"Batch 2") karena cuma kolom
   // tabel, bukan header grup seperti di layar - penjelasan lengkapnya ada di Catatan PDF.
-  const exportKartuRows: ExportPdfRow[] = filteredKartuRows.map((r) => {
+  const exportKartuRows: ExportExcelRow[] = filteredKartuRows.map((r) => {
     const p = r.pengembalian?.peserta;
     const b = r.pengembalian?.batch;
     return {
@@ -233,11 +233,11 @@ export default async function PengembalianPage({
                 <Link href={cetakKembaliHref} className="rounded-md px-2 py-1 text-xs font-medium text-brand-600 hover:bg-brand-50 hover:underline">
                   Cetak Daftar
                 </Link>
-                <ExportPdfButton
+                <ExportExcelButton
                   title="DAFTAR ID CARD DIKEMBALIKAN"
                   subtitle="Pengembalian ID Card & APD — MOH PLTU Cirebon 1"
                   rows={exportKartuRows}
-                  filename={`daftar-id-card-dikembalikan-${new Date().toISOString().slice(0, 10)}.pdf`}
+                  filename={`daftar-id-card-dikembalikan-${new Date().toISOString().slice(0, 10)}.xlsx`}
                 />
               </div>
             </div>
