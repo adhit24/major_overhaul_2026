@@ -13,6 +13,7 @@ const BATCH_CUTOFFS: { through: string; batch: number }[] = [
   { through: "2026-07-20", batch: 2 },
   { through: "2026-07-23", batch: 3 },
   { through: "2026-07-26", batch: 4 },
+  { through: "2026-07-28", batch: 5 },
 ];
 function batchForTanggal(tanggal: string): number {
   for (const c of BATCH_CUTOFFS) if (tanggal <= c.through) return c.batch;
