@@ -33,16 +33,20 @@ function CatatModal({ peserta, sudahTercatat, tarif, open, onClose }: Props & { 
   const [error, setError] = useState<string | null>(null);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [kondisi, setKondisi] = useState<Record<string, string>>({});
+  const today = new Date().toISOString().slice(0, 10);
+  const [tanggal, setTanggal] = useState(today);
+  const [catatan, setCatatan] = useState("");
 
   useEffect(() => {
     if (open) {
       setError(null);
       setChecked({});
       setKondisi({});
+      setTanggal(today);
+      setCatatan("");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
-
-  const today = new Date().toISOString().slice(0, 10);
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -67,7 +71,7 @@ function CatatModal({ peserta, sudahTercatat, tarif, open, onClose }: Props & { 
         <form onSubmit={onSubmit} className="mt-4 space-y-3">
           <label className="block text-sm">
             <span className="text-slate-600">Tanggal</span>
-            <input type="date" name="tanggal" defaultValue={today} className="input-field mt-1 w-full" required />
+            <input type="date" name="tanggal" value={tanggal} onChange={(e) => setTanggal(e.target.value)} className="input-field mt-1 w-full" required />
           </label>
 
           <div className="space-y-2 rounded-xl border border-slate-200 p-3">
@@ -127,7 +131,7 @@ function CatatModal({ peserta, sudahTercatat, tarif, open, onClose }: Props & { 
 
           <label className="block text-sm">
             <span className="text-slate-600">Catatan</span>
-            <textarea name="catatan" rows={2} className="input-field mt-1 w-full" />
+            <textarea name="catatan" rows={2} value={catatan} onChange={(e) => setCatatan(e.target.value)} className="input-field mt-1 w-full" />
           </label>
 
           {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
