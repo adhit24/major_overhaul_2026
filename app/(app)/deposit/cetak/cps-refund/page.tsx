@@ -4,6 +4,12 @@ import { DEPARTEMEN } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
+// Warna header section mengikuti warna fisik ID card per departemen supaya cepat dikenali di kertas.
+const SECTION_COLOR: Record<string, string> = {
+  BOILER: "bg-emerald-800",
+  "TBN-BOP": "bg-amber-600",
+};
+
 function formatRupiah(value: number) {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -125,7 +131,7 @@ export default async function CetakCpsRefundPage() {
         const kartuDicairkan = section.rows.reduce((s, r) => s + r.jumlah_kartu, 0);
         return (
           <section key={section.dept} className="mt-6" style={{ breakInside: "avoid" }}>
-            <h2 className="bg-brand-700 px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-white">
+            <h2 className={`${SECTION_COLOR[section.dept] ?? "bg-brand-700"} px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-white`}>
               SECTION {si + 1}: {section.dept}
             </h2>
             <p className="mt-1 text-[10px] text-slate-500">

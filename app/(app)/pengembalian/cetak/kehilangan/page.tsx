@@ -26,6 +26,12 @@ type Row = {
 
 const batchLabel = (b: number | null | undefined) => (b != null ? `Batch ${b}` : "Batch -");
 
+// Warna header section mengikuti warna fisik ID card per departemen supaya cepat dikenali di kertas.
+const SECTION_COLOR: Record<string, string> = {
+  BOILER: "bg-emerald-800",
+  "TBN-BOP": "bg-amber-600",
+};
+
 export default async function CetakKehilanganPage({
   searchParams,
 }: {
@@ -136,7 +142,7 @@ export default async function CetakKehilanganPage({
           // halaman manapun, meninggalkan halaman sebelumnya kosong. Per-baris (<tr>) yang perlu
           // dijaga tetap utuh, itu sudah ditangani di bawah.
           <section key={section.dept} className="mt-6">
-            <h2 className="bg-brand-700 px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-white" style={{ breakAfter: "avoid" }}>
+            <h2 className={`${SECTION_COLOR[section.dept] ?? "bg-brand-700"} px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-white`} style={{ breakAfter: "avoid" }}>
               SECTION {si + 1}: {section.dept}
             </h2>
             <table className="w-full table-fixed border-collapse text-[11px]">
