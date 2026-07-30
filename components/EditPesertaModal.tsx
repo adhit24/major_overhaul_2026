@@ -24,10 +24,11 @@ type Peserta = {
 
 export function EditPesertaButton({ peserta }: { peserta: Peserta }) {
   const [open, setOpen] = useState(false);
+  const [everOpened, setEverOpened] = useState(false);
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => { setEverOpened(true); setOpen(true); }}
         className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-brand-600 transition-colors"
         title="Edit data"
         aria-label="Edit data"
@@ -36,7 +37,7 @@ export function EditPesertaButton({ peserta }: { peserta: Peserta }) {
           <path d="M13.586 3.586a2 2 0 1 1 2.828 2.828l-.793.793-2.828-2.828.793-.793ZM11.379 5.793 3 14.172V17h2.828l8.38-8.379-2.83-2.828Z" />
         </svg>
       </button>
-      <EditModal peserta={peserta} open={open} onClose={() => setOpen(false)} />
+      {everOpened && <EditModal peserta={peserta} open={open} onClose={() => setOpen(false)} />}
     </>
   );
 }

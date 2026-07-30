@@ -15,14 +15,15 @@ type Props = {
 
 export function CatatPengembalianButton({ peserta, sudahTercatat, tarif }: Props) {
   const [open, setOpen] = useState(false);
+  const [everOpened, setEverOpened] = useState(false);
   const semuaTercatat = APD_ITEMS.every((i) => sudahTercatat.includes(i));
   if (semuaTercatat) return <span className="text-xs text-emerald-600">✔ selesai</span>;
   return (
     <>
-      <button onClick={() => setOpen(true)} className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">
+      <button onClick={() => { setEverOpened(true); setOpen(true); }} className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">
         Catat
       </button>
-      <CatatModal {...{ peserta, sudahTercatat, tarif }} open={open} onClose={() => setOpen(false)} />
+      {everOpened && <CatatModal {...{ peserta, sudahTercatat, tarif }} open={open} onClose={() => setOpen(false)} />}
     </>
   );
 }

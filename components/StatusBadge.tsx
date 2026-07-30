@@ -19,7 +19,7 @@ const DOT_STYLES: Record<string, string> = {
 export function StatusBadge({ status }: { status: string }) {
   return (
     <span className={`badge-pill gap-1.5 ${STATUS_STYLES[status] ?? "bg-slate-100 text-slate-600"}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${DOT_STYLES[status] ?? "bg-slate-400"}`} aria-hidden="true" />
+      <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${DOT_STYLES[status] ?? "bg-slate-400"}`} aria-hidden="true" />
       {status}
     </span>
   );

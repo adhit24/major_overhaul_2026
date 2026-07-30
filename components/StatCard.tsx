@@ -63,8 +63,8 @@ export function StatCard({
 
   if (href) {
     return (
-      <motion.div variants={itemVariants}>
-        <Link href={href} className={`card block transition hover:ring-1 ${ringClasses[tone]}`}>
+      <motion.div variants={itemVariants} className="h-full">
+        <Link href={href} className={`card block h-full transition hover:ring-1 ${ringClasses[tone]}`}>
           {content}
         </Link>
       </motion.div>
