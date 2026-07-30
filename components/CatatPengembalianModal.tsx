@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { catatPengembalian } from "@/app/(app)/pengembalian/actions";
 import { APD_ITEMS, APD_LABELS, KONDISI_ITEM, type ApdItem } from "@/lib/constants";
+import { Modal } from "@/components/Modal";
 
 type Props = {
   peserta: { id: number; nama: string; no_badge: string | null };
@@ -21,17 +22,25 @@ export function CatatPengembalianButton({ peserta, sudahTercatat, tarif }: Props
       <button onClick={() => setOpen(true)} className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700">
         Catat
       </button>
-      {open && <CatatModal {...{ peserta, sudahTercatat, tarif }} onClose={() => setOpen(false)} />}
+      <CatatModal {...{ peserta, sudahTercatat, tarif }} open={open} onClose={() => setOpen(false)} />
     </>
   );
 }
 
-function CatatModal({ peserta, sudahTercatat, tarif, onClose }: Props & { onClose: () => void }) {
+function CatatModal({ peserta, sudahTercatat, tarif, open, onClose }: Props & { open: boolean; onClose: () => void }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [kondisi, setKondisi] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (open) {
+      setError(null);
+      setChecked({});
+      setKondisi({});
+    }
+  }, [open]);
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -50,11 +59,8 @@ function CatatModal({ peserta, sudahTercatat, tarif, onClose }: Props & { onClos
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div
-        className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal open={open} onClose={onClose} maxWidthClassName="max-w-lg">
+      <div className="overflow-y-auto p-6">
         <h3 className="text-base font-bold text-slate-800">Catat Pengembalian</h3>
         <p className="mt-0.5 text-sm text-slate-500">{peserta.nama} — Badge {peserta.no_badge ?? "-"}</p>
 
@@ -134,6 +140,6 @@ function CatatModal({ peserta, sudahTercatat, tarif, onClose }: Props & { onClos
           </div>
         </form>
       </div>
-    </div>
+    </Modal>
   );
 }
