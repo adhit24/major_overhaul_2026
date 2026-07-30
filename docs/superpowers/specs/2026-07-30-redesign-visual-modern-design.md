@@ -81,8 +81,14 @@ warna sudah semantic, bukan hardcode).
 - Modal (`EditPesertaModal`, `CatatPengembalianModal`, dll.) — dibungkus
   `AnimatePresence`, scale+fade dari sumber trigger, scrim gelap di belakang.
 - Button/input — ukuran sentuh 44px yang sudah benar dipertahankan, warna
-  diganti ke token baru, feedback tekan pakai Motion `whileTap` (spring)
-  menggantikan `active:scale` CSS yang sekarang.
+  diganti ke token baru. **Revisi dari draf awal**: feedback tekan TETAP
+  pakai `active:scale-[0.98]` CSS yang sekarang, tidak dimigrasikan ke Motion
+  `whileTap`. Alasan: tombol `.btn-primary`/`.btn-secondary`/`.btn-ghost`
+  dipakai sebagai `<button>` maupun `<Link>` polos di ~15 file server
+  component — migrasi ke Motion berarti mengubah semuanya jadi client
+  component, refactor besar untuk manfaat marginal karena `active:scale`
+  CSS sudah memenuhi guideline `press-feedback`/`scale-feedback` di
+  `ui-ux-pro-max` §7 tanpa risiko/biaya tambahan itu.
 
 ### 4. Halaman cetak (surat kehilangan, tanda terima kembali, refund CPS)
 
@@ -97,7 +103,15 @@ dipertahankan posisinya.
 Dipakai untuk makna, bukan dekorasi (mengikuti anti-pattern skill: jangan
 animasikan >1-2 elemen kunci per view, jangan animasikan width/height):
 
-- Transisi halaman: fade/slide halus saat pindah route.
+- Transisi halaman: fade+slide-up ringan (masuk saja, tanpa animasi keluar)
+  di-*key* oleh pathname. **Revisi dari draf awal**: bukan
+  `AnimatePresence mode="wait"` penuh dengan animasi keluar — untuk halaman
+  Server Component yang mengambil data async, exit-then-enter penuh
+  berisiko terasa lebih lambat/berkedip (konten lama sempat memudar
+  sebelum konten baru muncul) dan berpotensi konflik dengan Suspense/
+  streaming Next.js. Versi masuk-saja tetap memberi kesan "halaman baru"
+  tanpa risiko itu, dan tidak ikut ter-trigger saat hanya query string yang
+  berubah (mis. mengetik di filter/search) karena key-nya cuma pathname.
 - Entrance list/baris tabel: stagger ringan (30–50ms per item).
 - Modal enter/exit: `AnimatePresence` + scale/fade.
 - Sidebar/BottomNav: shared-layout pill indicator.
