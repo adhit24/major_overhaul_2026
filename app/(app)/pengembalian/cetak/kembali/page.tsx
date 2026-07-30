@@ -26,6 +26,17 @@ type Row = {
 
 const batchLabel = (b: number | null | undefined) => (b != null ? `Batch ${b}` : "Batch -");
 
+const SECTION_COLORS: Record<string, { header: string; subtotalBorder: string }> = {
+  "BOILER": {
+    header: "bg-emerald-900",
+    subtotalBorder: "border-emerald-900",
+  },
+  "TBN-BOP": {
+    header: "bg-orange-800",
+    subtotalBorder: "border-orange-800",
+  },
+};
+
 export default async function CetakKembaliPage({
   searchParams,
 }: {
@@ -140,13 +151,19 @@ export default async function CetakKembaliPage({
         Total: <b>{grandTotal}</b> kartu
       </div>
 
-      {sections.map((section, si) => (
+      {sections.map((section, si) => {
+        const sectionColor = SECTION_COLORS[section.dept] ?? {
+          header: "bg-brand-700",
+          subtotalBorder: "border-brand-700",
+        };
+
+        return (
         // Section bisa berisi ratusan baris (beberapa halaman) - jangan breakInside:avoid di
         // sini, itu justru bikin browser mendorong SELURUH section (yang tidak muat di sisa
         // halaman manapun) ke halaman baru, meninggalkan halaman sebelumnya kosong. Yang perlu
         // dijaga tetap utuh cuma per-baris (<tr> di bawah sudah begitu).
         <section key={section.dept} className="mt-6">
-          <h2 className="bg-brand-700 px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-white" style={{ breakAfter: "avoid" }}>
+          <h2 className={`${sectionColor.header} px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-white`} style={{ breakAfter: "avoid" }}>
             SECTION {si + 1}: {section.dept}
           </h2>
           <table className="w-full table-fixed border-collapse text-[11px]">
@@ -191,14 +208,15 @@ export default async function CetakKembaliPage({
                   </tr>
                 );
               })}
-              <tr className="border-t-2 border-brand-700 font-semibold">
+              <tr className={`border-t-2 ${sectionColor.subtotalBorder} font-semibold`}>
                 <td colSpan={8} className="px-1.5 py-1.5 text-right">SUBTOTAL {section.dept}</td>
                 <td className="px-1.5 py-1.5 tabular-nums">{section.rows.length}</td>
               </tr>
             </tbody>
           </table>
         </section>
-      ))}
+        );
+      })}
 
       <table className="mt-4 w-full border-collapse text-xs" style={{ breakInside: "avoid" }}>
         <tbody>
