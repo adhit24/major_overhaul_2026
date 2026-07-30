@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { motion } from 'framer-motion';
 
 const NAV = [
   {
@@ -89,16 +90,21 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-semibold transition-colors ${
-                active
-                  ? 'text-brand-600 bg-brand-50/60'
-                  : 'text-slate-400 hover:text-slate-600'
+              className={`relative flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-semibold transition-colors ${
+                active ? 'text-brand-600' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
-              <span className={active ? 'text-brand-600' : 'text-slate-400'}>
+              {active && (
+                <motion.span
+                  layoutId="bottomnav-active-pill"
+                  className="absolute inset-x-2 inset-y-1.5 rounded-lg bg-brand-50/60"
+                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                />
+              )}
+              <span className={`relative z-10 ${active ? 'text-brand-600' : 'text-slate-400'}`}>
                 {item.icon}
               </span>
-              {item.label}
+              <span className="relative z-10">{item.label}</span>
             </Link>
           );
         })}
