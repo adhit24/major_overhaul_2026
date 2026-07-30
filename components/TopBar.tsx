@@ -1,10 +1,26 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { logout } from "@/app/(app)/actions";
 import { CommandPalette } from "./CommandPalette";
 import { SubmitButton } from "./SubmitButton";
 
 export function TopBar({ title, email }: { title: string; email?: string }) {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
-    <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-3.5 sm:px-6">
+    <header
+      className={`sticky top-0 z-30 flex items-center justify-between border-b border-slate-200 bg-white/95 px-4 py-3.5 backdrop-blur transition-shadow sm:px-6 ${
+        scrolled ? "shadow-sm" : "shadow-none"
+      }`}
+    >
       <h1 className="text-base font-semibold text-slate-900">{title}</h1>
       <div className="flex items-center gap-3">
         <CommandPalette />

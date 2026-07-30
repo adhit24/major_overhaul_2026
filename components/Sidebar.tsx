@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
 
 const NAV_ITEMS = [
   {
@@ -77,33 +78,36 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden w-60 flex-col border-r border-slate-200 bg-white px-4 py-6 sm:flex print:hidden">
+    <aside className="hidden w-64 flex-col border-r border-slate-200 bg-white px-4 py-6 sm:flex print:hidden">
       <div className="mb-8 px-2">
         <img src="/logo_koin.png" alt="PT KOIN" className="h-10 w-auto object-contain" />
       </div>
 
       <nav className="flex flex-1 flex-col gap-1">
         {NAV_ITEMS.map((item) => {
-          // Href terpanjang yang cocok yang "menang" (mis. /pengembalian/kehilangan tidak
-          // ikut menyalakan /pengembalian) - sort sekali di luar map akan lebih rapi, tapi
-          // list-nya kecil jadi hitung di tempat saja.
           const matches = NAV_ITEMS.filter((n) => pathname === n.href || pathname.startsWith(n.href + "/"));
-          const best = matches.sort((a, b) => b.href.length - a.href.length)[0];
+          const best = [...matches].sort((a, b) => b.href.length - a.href.length)[0];
           const active = best?.href === item.href;
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                active
-                  ? "bg-brand-50 text-brand-700"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+              className={`relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                active ? "text-brand-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               }`}
             >
-              <span className={active ? "text-brand-600" : "text-slate-400"} aria-hidden>
+              {active ? (
+                <motion.span
+                  layoutId="sidebar-active-pill"
+                  className="absolute inset-0 rounded-xl bg-brand-50 ring-1 ring-brand-100"
+                  transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                  aria-hidden="true"
+                />
+              ) : null}
+              <span className={`relative ${active ? "text-brand-600" : "text-slate-400"}`} aria-hidden>
                 {item.icon}
               </span>
-              {item.label}
+              <span className="relative">{item.label}</span>
             </Link>
           );
         })}

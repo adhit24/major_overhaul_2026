@@ -105,7 +105,7 @@ export default async function CetakKembaliPage({
         <nav className="flex flex-wrap gap-1.5">
           <a
             href={tabHref(null)}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold ${batchFilter == null ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+            className={`rounded-md px-3 py-1.5 text-xs font-semibold ${batchFilter == null ? "bg-brand-700 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
           >
             Semua Batch
           </a>
@@ -113,7 +113,7 @@ export default async function CetakKembaliPage({
             <a
               key={b}
               href={tabHref(b)}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold ${batchFilter === b ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold ${batchFilter === b ? "bg-brand-700 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
             >
               Batch {b} — Cetak
             </a>
@@ -122,7 +122,7 @@ export default async function CetakKembaliPage({
         <PrintButton />
       </div>
 
-      <header className="flex items-center justify-between border-b-2 border-slate-800 pb-4">
+      <header className="flex items-center justify-between border-b-2 border-brand-700 pb-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logos/logo_cps_transparent.png" alt="Cirebon Power" className="h-12 w-auto object-contain" />
         <div className="text-center">
@@ -146,7 +146,7 @@ export default async function CetakKembaliPage({
         // halaman manapun) ke halaman baru, meninggalkan halaman sebelumnya kosong. Yang perlu
         // dijaga tetap utuh cuma per-baris (<tr> di bawah sudah begitu).
         <section key={section.dept} className="mt-6">
-          <h2 className="bg-slate-800 px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-white" style={{ breakAfter: "avoid" }}>
+          <h2 className="bg-brand-700 px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-white" style={{ breakAfter: "avoid" }}>
             SECTION {si + 1}: {section.dept}
           </h2>
           <table className="w-full table-fixed border-collapse text-[11px]">
@@ -191,7 +191,7 @@ export default async function CetakKembaliPage({
                   </tr>
                 );
               })}
-              <tr className="border-t-2 border-slate-800 font-semibold">
+              <tr className="border-t-2 border-brand-700 font-semibold">
                 <td colSpan={8} className="px-1.5 py-1.5 text-right">SUBTOTAL {section.dept}</td>
                 <td className="px-1.5 py-1.5 tabular-nums">{section.rows.length}</td>
               </tr>
@@ -202,7 +202,7 @@ export default async function CetakKembaliPage({
 
       <table className="mt-4 w-full border-collapse text-xs" style={{ breakInside: "avoid" }}>
         <tbody>
-          <tr className="border-t-4 border-double border-slate-800">
+          <tr className="border-t-4 border-double border-brand-700">
             <td className="py-2 pr-8 text-sm font-bold">GRAND TOTAL</td>
             <td className="py-2 text-right text-sm font-bold tabular-nums">{grandTotal}</td>
           </tr>

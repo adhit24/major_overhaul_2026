@@ -29,7 +29,7 @@ export default async function BuktiPage({
         <PrintButton />
       </div>
 
-      <header className="flex items-center justify-between border-b-2 border-slate-800 pb-4">
+      <header className="flex items-center justify-between border-b-2 border-brand-700 pb-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logos/logo_cps_transparent.png" alt="Cirebon Power" className="h-12 w-auto object-contain" />
         <div className="text-center">

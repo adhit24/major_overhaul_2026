@@ -3,11 +3,49 @@ import { createClient } from "@/lib/supabase/server";
 import { TopBar } from "@/components/TopBar";
 import { StatCard } from "@/components/StatCard";
 import { StatusBadge } from "@/components/StatusBadge";
+import { MotionStagger } from "@/components/MotionStagger";
 
 export const dynamic = "force-dynamic";
 
 function formatRupiah(value: number) {
   return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(value);
+}
+
+function IconCard() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <circle cx="8.5" cy="10.5" r="1.5" />
+      <path d="M6 15h5M14 9h4M14 13h4" />
+    </svg>
+  );
+}
+
+function IconCheckBadge() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  );
+}
+
+function IconWarning() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+      <path d="M12 9v4M12 17h.01" />
+    </svg>
+  );
+}
+
+function IconMoney() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <circle cx="12" cy="12" r="2.5" />
+    </svg>
+  );
 }
 
 export default async function DashboardPage() {
@@ -69,15 +107,16 @@ export default async function DashboardPage() {
     <>
       <TopBar title="Dashboard" email={userData.user?.email} />
       <main className="flex-1 space-y-6 p-4 sm:p-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          <StatCard label="Total Kartu Diajukan" value={totalKartu} hint="batch DONE" />
-          <StatCard label="Sudah Ada Badge" value={totalBadgeValid} tone="success" />
+        <MotionStagger className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <StatCard label="Total Kartu Diajukan" value={totalKartu} hint="batch DONE" icon={<IconCard />} />
+          <StatCard label="Sudah Ada Badge" value={totalBadgeValid} tone="success" icon={<IconCheckBadge />} />
           <StatCard
             label="ID Badge Sudah Kembali"
             value={nKartuKembali}
             tone="success"
             hint="Kartu fisik sudah kembali"
             href="/pengembalian"
+            icon={<IconCheckBadge />}
           />
           <StatCard
             label="ID Badge Tersisa"
@@ -85,16 +124,18 @@ export default async function DashboardPage() {
             tone={nKartuTersisa ? "warning" : "default"}
             hint="Belum tercatat kembali"
             href="/pengembalian"
+            icon={<IconWarning />}
           />
-          <StatCard label="Total Deposit Tercatat" value={formatRupiah(totalDeposit)} hint={`${doneBatches.length} batch DONE`} />
+          <StatCard label="Total Deposit Tercatat" value={formatRupiah(totalDeposit)} hint={`${doneBatches.length} batch DONE`} icon={<IconMoney />} />
           <StatCard
             label="Nominal Sisa Pengembalian"
             value={formatRupiah(nominalSisaPengembalian)}
             tone={nominalSisaPengembalian > 0 ? "warning" : "default"}
             hint={`${nKartuTersisa} ID badge tersisa`}
             href="/deposit"
+            icon={<IconMoney />}
           />
-        </div>
+        </MotionStagger>
 
         <div className="card">
           <div className="mb-4 flex items-center justify-between">

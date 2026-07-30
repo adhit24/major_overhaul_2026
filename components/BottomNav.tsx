@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { motion } from 'framer-motion';
 
 const NAV = [
   {
@@ -77,28 +78,32 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white sm:hidden print:hidden">
-      <div className="flex h-16 items-stretch">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-slate-200 bg-white/95 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur sm:hidden print:hidden">
+      <div className="flex h-16 items-stretch pb-[env(safe-area-inset-bottom)]">
         {NAV.map((item) => {
-          // Href terpanjang yang cocok yang "menang" (mis. /pengembalian/kehilangan tidak
-          // ikut menyalakan /pengembalian).
           const matches = NAV.filter((n) => pathname === n.href || pathname.startsWith(n.href + '/'));
-          const best = matches.sort((a, b) => b.href.length - a.href.length)[0];
+          const best = [...matches].sort((a, b) => b.href.length - a.href.length)[0];
           const active = best?.href === item.href;
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-semibold transition-colors ${
-                active
-                  ? 'text-brand-600 bg-brand-50/60'
-                  : 'text-slate-400 hover:text-slate-600'
+              className={`relative flex flex-1 flex-col items-center justify-center gap-1 text-[10px] font-semibold transition-colors ${
+                active ? 'text-brand-700' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
-              <span className={active ? 'text-brand-600' : 'text-slate-400'}>
+              {active ? (
+                <motion.span
+                  layoutId="bottomnav-active-pill"
+                  className="absolute inset-x-1 top-1 bottom-1 rounded-xl bg-brand-50 ring-1 ring-brand-100"
+                  transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                  aria-hidden="true"
+                />
+              ) : null}
+              <span className={`relative ${active ? 'text-brand-600' : 'text-slate-400'}`}>
                 {item.icon}
               </span>
-              {item.label}
+              <span className="relative max-w-full truncate px-1">{item.label}</span>
             </Link>
           );
         })}
