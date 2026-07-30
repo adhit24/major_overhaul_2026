@@ -9,3 +9,4 @@ out/
 /scripts/data/
 tsconfig.tsbuildinfo
 .claude/
+.worktrees/
