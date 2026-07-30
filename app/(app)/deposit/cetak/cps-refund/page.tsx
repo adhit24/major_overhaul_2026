@@ -4,6 +4,12 @@ import { DEPARTEMEN } from "@/lib/constants";
 
 export const dynamic = "force-dynamic";
 
+// Warna header section mengikuti warna fisik ID card per departemen supaya cepat dikenali di kertas.
+const SECTION_COLOR: Record<string, string> = {
+  BOILER: "bg-emerald-800",
+  "TBN-BOP": "bg-amber-600",
+};
+
 function formatRupiah(value: number) {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -83,7 +89,7 @@ export default async function CetakCpsRefundPage() {
         <PrintButton />
       </div>
 
-      <header className="flex items-center justify-between border-b-2 border-slate-800 pb-4">
+      <header className="flex items-center justify-between border-b-2 border-brand-700 pb-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logos/logo_cps_transparent.png" alt="Cirebon Power" className="h-12 w-auto object-contain" />
         <div className="text-center">
@@ -125,7 +131,7 @@ export default async function CetakCpsRefundPage() {
         const kartuDicairkan = section.rows.reduce((s, r) => s + r.jumlah_kartu, 0);
         return (
           <section key={section.dept} className="mt-6" style={{ breakInside: "avoid" }}>
-            <h2 className="bg-slate-800 px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-white">
+            <h2 className={`${SECTION_COLOR[section.dept] ?? "bg-brand-700"} px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-white`}>
               SECTION {si + 1}: {section.dept}
             </h2>
             <p className="mt-1 text-[10px] text-slate-500">
@@ -166,7 +172,7 @@ export default async function CetakCpsRefundPage() {
                       <td className="px-1.5 py-1 break-words">{r.keterangan ?? "-"}</td>
                     </tr>
                   ))}
-                  <tr className="border-t-2 border-slate-800 font-semibold">
+                  <tr className="border-t-2 border-brand-700 font-semibold">
                     <td className="px-1.5 py-1.5 text-right" colSpan={1}>SUBTOTAL {section.dept}</td>
                     <td className="px-1.5 py-1.5 tabular-nums">{kartuDicairkan}</td>
                     <td className="px-1.5 py-1.5 tabular-nums whitespace-nowrap">{formatRupiah(dikembalikan)}</td>
@@ -181,7 +187,7 @@ export default async function CetakCpsRefundPage() {
 
       <table className="mt-4 w-full border-collapse text-xs" style={{ breakInside: "avoid" }}>
         <tbody>
-          <tr className="border-t-4 border-double border-slate-800">
+          <tr className="border-t-4 border-double border-brand-700">
             <td className="py-2 pr-8 text-sm font-bold">GRAND TOTAL — Standing Balance</td>
             <td className="py-2 text-right text-sm font-bold tabular-nums">{formatRupiah(standingBalanceTotal)}</td>
           </tr>
@@ -200,19 +206,19 @@ export default async function CetakCpsRefundPage() {
       <div className="mt-10 grid grid-cols-3 gap-6 text-xs" style={{ breakInside: "avoid" }}>
         <div className="text-center">
           <p>Dibuat oleh,</p>
-          <div className="mt-16 border-t border-slate-800 pt-1">
+          <div className="mt-16 border-t border-brand-700 pt-1">
             <p className="text-slate-400">(Nama &amp; Tanggal)</p>
           </div>
         </div>
         <div className="text-center">
           <p>Diperiksa oleh,</p>
-          <div className="mt-16 border-t border-slate-800 pt-1">
+          <div className="mt-16 border-t border-brand-700 pt-1">
             <p className="text-slate-400">(Nama &amp; Tanggal)</p>
           </div>
         </div>
         <div className="text-center">
           <p>Disetujui oleh,</p>
-          <div className="mt-16 border-t border-slate-800 pt-1">
+          <div className="mt-16 border-t border-brand-700 pt-1">
             <p className="text-slate-400">(Nama &amp; Tanggal)</p>
           </div>
         </div>

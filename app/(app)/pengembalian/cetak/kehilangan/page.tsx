@@ -26,6 +26,12 @@ type Row = {
 
 const batchLabel = (b: number | null | undefined) => (b != null ? `Batch ${b}` : "Batch -");
 
+// Warna header section mengikuti warna fisik ID card per departemen supaya cepat dikenali di kertas.
+const SECTION_COLOR: Record<string, string> = {
+  BOILER: "bg-emerald-800",
+  "TBN-BOP": "bg-amber-600",
+};
+
 export default async function CetakKehilanganPage({
   searchParams,
 }: {
@@ -93,7 +99,7 @@ export default async function CetakKehilanganPage({
         <nav className="flex flex-wrap gap-1.5">
           <a
             href={tabHref(null)}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold ${batchFilter == null ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+            className={`rounded-md px-3 py-1.5 text-xs font-semibold ${batchFilter == null ? "bg-brand-700 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
           >
             Semua Batch
           </a>
@@ -101,7 +107,7 @@ export default async function CetakKehilanganPage({
             <a
               key={b}
               href={tabHref(b)}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold ${batchFilter === b ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold ${batchFilter === b ? "bg-brand-700 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
             >
               Batch {b} — Cetak
             </a>
@@ -110,7 +116,7 @@ export default async function CetakKehilanganPage({
         <PrintButton />
       </div>
 
-      <header className="flex items-center justify-between border-b-2 border-slate-800 pb-4">
+      <header className="flex items-center justify-between border-b-2 border-brand-700 pb-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logos/logo_cps_transparent.png" alt="Cirebon Power" className="h-12 w-auto object-contain" />
         <div className="text-center">
@@ -136,7 +142,7 @@ export default async function CetakKehilanganPage({
           // halaman manapun, meninggalkan halaman sebelumnya kosong. Per-baris (<tr>) yang perlu
           // dijaga tetap utuh, itu sudah ditangani di bawah.
           <section key={section.dept} className="mt-6">
-            <h2 className="bg-slate-800 px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-white" style={{ breakAfter: "avoid" }}>
+            <h2 className={`${SECTION_COLOR[section.dept] ?? "bg-brand-700"} px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-white`} style={{ breakAfter: "avoid" }}>
               SECTION {si + 1}: {section.dept}
             </h2>
             <table className="w-full table-fixed border-collapse text-[11px]">
@@ -181,7 +187,7 @@ export default async function CetakKehilanganPage({
                     </tr>
                   );
                 })}
-                <tr className="border-t-2 border-slate-800 font-semibold">
+                <tr className="border-t-2 border-brand-700 font-semibold">
                   <td colSpan={7} className="px-1.5 py-1.5 text-right">SUBTOTAL {section.dept}</td>
                   <td className="px-1.5 py-1.5 tabular-nums">{section.rows.length}</td>
                   <td className="px-1.5 py-1.5 text-right tabular-nums">{formatRupiah(subtotalPotongan)}</td>
@@ -194,7 +200,7 @@ export default async function CetakKehilanganPage({
 
       <table className="mt-4 w-full border-collapse text-xs" style={{ breakInside: "avoid" }}>
         <tbody>
-          <tr className="border-t-4 border-double border-slate-800">
+          <tr className="border-t-4 border-double border-brand-700">
             <td className="py-2 pr-8 text-sm font-bold">GRAND TOTAL</td>
             <td className="py-2 text-right text-sm font-bold tabular-nums">{grandTotal} kartu</td>
             <td className="py-2 pl-8 text-right text-sm font-bold tabular-nums">{formatRupiah(grandTotalPotongan)}</td>

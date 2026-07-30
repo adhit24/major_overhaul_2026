@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { motion } from "framer-motion";
 
 const NAV_ITEMS = [
   {
@@ -94,16 +95,21 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                active
-                  ? "bg-brand-50 text-brand-700"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+              className={`relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                active ? "text-brand-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
               }`}
             >
-              <span className={active ? "text-brand-600" : "text-slate-400"} aria-hidden>
+              {active && (
+                <motion.span
+                  layoutId="sidebar-active-pill"
+                  className="absolute inset-0 rounded-lg bg-brand-50"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
+              <span className={`relative z-10 ${active ? "text-brand-600" : "text-slate-400"}`} aria-hidden>
                 {item.icon}
               </span>
-              {item.label}
+              <span className="relative z-10">{item.label}</span>
             </Link>
           );
         })}

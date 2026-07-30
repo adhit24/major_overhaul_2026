@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useTransition, useRef } from 'react';
+import { useEffect, useState, useTransition, useRef } from 'react';
 import { updatePeserta, deletePeserta } from '@/app/(app)/actions';
+import { Modal } from '@/components/Modal';
 
 const ADMIN_PIN = '242424';
 
@@ -23,10 +24,11 @@ type Peserta = {
 
 export function EditPesertaButton({ peserta }: { peserta: Peserta }) {
   const [open, setOpen] = useState(false);
+  const [everOpened, setEverOpened] = useState(false);
   return (
     <>
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => { setEverOpened(true); setOpen(true); }}
         className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-brand-600 transition-colors"
         title="Edit data"
         aria-label="Edit data"
@@ -35,14 +37,12 @@ export function EditPesertaButton({ peserta }: { peserta: Peserta }) {
           <path d="M13.586 3.586a2 2 0 1 1 2.828 2.828l-.793.793-2.828-2.828.793-.793ZM11.379 5.793 3 14.172V17h2.828l8.38-8.379-2.83-2.828Z" />
         </svg>
       </button>
-      {open && (
-        <EditModal peserta={peserta} onClose={() => setOpen(false)} />
-      )}
+      {everOpened && <EditModal peserta={peserta} open={open} onClose={() => setOpen(false)} />}
     </>
   );
 }
 
-function EditModal({ peserta, onClose }: { peserta: Peserta; onClose: () => void }) {
+function EditModal({ peserta, open, onClose }: { peserta: Peserta; open: boolean; onClose: () => void }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -89,6 +89,35 @@ function EditModal({ peserta, onClose }: { peserta: Peserta; onClose: () => void
     remarks:           peserta.remarks ?? '',
   });
 
+  // Modal is now always mounted (Modal uses AnimatePresence for exit
+  // animation), so state no longer resets via unmount — reset explicitly
+  // whenever the modal transitions to open, matching the old behavior.
+  useEffect(() => {
+    if (open) {
+      setForm({
+        status_badge:      peserta.status_badge ?? 'PENDING',
+        no_badge:          peserta.no_badge ?? '',
+        no_erp:            peserta.no_erp ?? '',
+        jabatan_deskripsi: peserta.jabatan_deskripsi ?? '',
+        leader:            peserta.leader ?? '',
+        tanggal_induction: peserta.tanggal_induction ?? '',
+        due_date:          peserta.due_date ?? '',
+        ktp:               peserta.ktp ?? false,
+        sks:               peserta.sks ?? false,
+        sertifikat:        peserta.sertifikat ?? false,
+        remarks:           peserta.remarks ?? '',
+      });
+      setError(null);
+      setSuccess(false);
+      setShowPinPrompt(false);
+      setPin('');
+      setPinError('');
+      setDeleting(false);
+      setDeleted(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, peserta.id]);
+
   function set(field: string, value: string | boolean) {
     setForm((f) => ({ ...f, [field]: value }));
   }
@@ -127,15 +156,7 @@ function EditModal({ peserta, onClose }: { peserta: Peserta; onClose: () => void
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-
-      {/* Modal */}
-      <div className="relative flex max-h-[90dvh] w-full max-w-md flex-col rounded-2xl bg-white shadow-2xl ring-1 ring-slate-200">
+    <Modal open={open} onClose={onClose}>
         {/* Header */}
         <div className="flex shrink-0 items-start justify-between border-b border-slate-100 px-6 py-4">
           <div>
@@ -405,7 +426,6 @@ function EditModal({ peserta, onClose }: { peserta: Peserta; onClose: () => void
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }
