@@ -6,6 +6,7 @@ import Link from "next/link";
 import { catatPengembalian } from "@/app/(app)/pengembalian/actions";
 import { APD_ITEMS, APD_LABELS, KONDISI_ITEM, type ApdItem } from "@/lib/constants";
 import { Modal } from "@/components/Modal";
+import { MorphingSpinner } from "@/components/ui/morphing-spinner";
 
 type Props = {
   peserta: { id: number; nama: string; no_badge: string | null };
@@ -135,7 +136,14 @@ function CatatModal({ peserta, sudahTercatat, tarif, open, onClose }: Props & { 
           <div className="flex justify-end gap-2 pt-1">
             <button type="button" onClick={onClose} className="btn-ghost">Batal</button>
             <button type="submit" disabled={isPending} className="btn-primary text-sm">
-              {isPending ? "Menyimpan..." : "Simpan"}
+              {isPending ? (
+                <>
+                  <MorphingSpinner size="sm" className="h-3.5 w-3.5 shrink-0" />
+                  Menyimpan...
+                </>
+              ) : (
+                "Simpan"
+              )}
             </button>
           </div>
         </form>

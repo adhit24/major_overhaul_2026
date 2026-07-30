@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
+import { MorphingSpinner } from '@/components/ui/morphing-spinner';
 
 interface Result {
   id: string;
@@ -38,12 +39,7 @@ function SearchIcon({ className = 'h-4 w-4' }: { className?: string }) {
 }
 
 function SpinIcon() {
-  return (
-    <svg className="h-3.5 w-3.5 animate-spin text-slate-300" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" className="opacity-25" />
-      <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" className="opacity-75" />
-    </svg>
-  );
+  return <MorphingSpinner size="sm" className="h-3.5 w-3.5 shrink-0 opacity-70" />;
 }
 
 export function CommandPalette() {

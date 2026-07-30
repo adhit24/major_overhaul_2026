@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { updateTarif } from "@/app/(app)/pengembalian/actions";
 import { APD_ITEMS, APD_LABELS } from "@/lib/constants";
+import { MorphingSpinner } from "@/components/ui/morphing-spinner";
 
 export function TarifCard({ tarif }: { tarif: Record<string, number> }) {
   const [open, setOpen] = useState(false);
@@ -46,7 +47,14 @@ export function TarifCard({ tarif }: { tarif: Record<string, number> }) {
           ))}
           <div className="flex items-center gap-3 pt-1">
             <button type="submit" disabled={isPending} className="btn-primary text-sm">
-              {isPending ? "Menyimpan..." : "Simpan Tarif"}
+              {isPending ? (
+                <>
+                  <MorphingSpinner size="sm" className="h-3.5 w-3.5 shrink-0" />
+                  Menyimpan...
+                </>
+              ) : (
+                "Simpan Tarif"
+              )}
             </button>
             {msg && <span className="text-xs text-slate-500">{msg}</span>}
           </div>

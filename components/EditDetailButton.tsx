@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updatePengembalianDetail, batalkanPengembalianDetail } from "@/app/(app)/pengembalian/actions";
 import { KONDISI_ITEM, APD_LABELS, type ApdItem } from "@/lib/constants";
+import { MorphingSpinner } from "@/components/ui/morphing-spinner";
 
 const BATALKAN = "__BATALKAN__";
 
@@ -107,9 +108,18 @@ export function EditDetailButton({ detailId, pesertaId, item, kondisiAwal, poton
                 <button
                   type="submit"
                   disabled={isPending}
-                  className={isBatalkan ? "rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60" : "btn-primary text-sm"}
+                  className={isBatalkan ? "inline-flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60" : "btn-primary text-sm"}
                 >
-                  {isPending ? "Menyimpan..." : isBatalkan ? "Aktifkan Kembali" : "Simpan"}
+                  {isPending ? (
+                    <>
+                      <MorphingSpinner size="sm" className="h-3.5 w-3.5 shrink-0" />
+                      Menyimpan...
+                    </>
+                  ) : isBatalkan ? (
+                    "Aktifkan Kembali"
+                  ) : (
+                    "Simpan"
+                  )}
                 </button>
               </div>
             </form>
