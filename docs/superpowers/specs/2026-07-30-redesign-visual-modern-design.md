@@ -59,9 +59,15 @@ warna sudah semantic, bukan hardcode).
   restyle warna.
 - **BottomNav** (mobile): treatment indikator aktif yang sama dengan Sidebar,
   padding aman untuk safe-area.
-- **Login**: redesain jadi split layout — panel kanan pakai
-  `public/background_pltu.png` (sudah ada di repo, belum pernah dipakai),
-  kartu form fade/slide-in saat mount.
+- **Login**: **di luar cakupan** — koreksi dari draf awal. `app/login/LoginCard.tsx`
+  ternyata sudah berupa hero glassmorphism penuh (background foto PLTU dari
+  Supabase Storage, kartu blur, animasi spring Motion di tiap elemen, toggle
+  show/hide password, badge "BETA") — bukan halaman polos seperti dugaan awal
+  (draf pertama salah baca file ini karena satu baris berisi logo base64
+  raksasa yang memotong pembacaan). Halaman ini sudah memenuhi standar modern
+  yang diinginkan dan tidak memakai token `brand-*` sama sekali (pakai
+  `orange-*` langsung, konsisten dengan warna oranye logo), jadi tidak
+  terpengaruh oleh perubahan token di bagian 1. Tidak disentuh sama sekali.
 
 ### 3. Komponen bersama
 
@@ -106,8 +112,8 @@ animasikan >1-2 elemen kunci per view, jangan animasikan width/height):
 2. Komponen bersama: Sidebar, TopBar, BottomNav, StatCard, StatusBadge,
    tombol/input, modal wrapper.
 3. Halaman satu per satu mengikuti urutan yang paling sering dilihat:
-   Login → Shell → Dashboard → Peserta → Deposit → Pengembalian (+ cetak) →
-   Manpower.
+   Shell → Dashboard → Peserta → Deposit → Pengembalian (+ cetak) → Manpower.
+   (Login dikecualikan — lihat bagian 2.)
 
 Pendekatan ini dipilih dibanding dua alternatif: (a) restyle halaman
 ramai-dulu (Dashboard/Peserta) baru menyusul sisanya — ditolak karena
@@ -122,11 +128,10 @@ yang berubah cuma lapisan visual/interaksi, bukan cara data diambil/diolah.
   `data-card`, `badge-pill`, dst.) direstyle ke token baru.
 - `app/layout.tsx` — ganti font `Inter` → `Plus Jakarta Sans`.
 - Semua file di `components/` — restyle + animasi Motion sesuai bagian 3 & 5.
-- Semua halaman di `app/(app)/**/page.tsx` dan `app/login/**` — restyle
-  memakai class/komponen yang sudah diperbarui.
+- Semua halaman di `app/(app)/**/page.tsx` — restyle memakai class/komponen
+  yang sudah diperbarui. `app/login/**` TIDAK termasuk (lihat bagian 2).
 - Halaman cetak di `app/(app)/deposit/cetak/**` dan
   `app/(app)/pengembalian/cetak/**` — restyle ringan sesuai bagian 4.
-- `public/background_pltu.png` — dipakai pertama kali (di halaman Login).
 
 ## Yang TIDAK berubah
 
@@ -137,3 +142,7 @@ yang berubah cuma lapisan visual/interaksi, bukan cara data diambil/diolah.
 - Tidak ada halaman yang dihapus/digabung; struktur navigasi tetap sama.
 - Data cetak/isi dokumen resmi tidak berubah, hanya gaya visualnya (warna
   header, tipografi) — tata letak kolom/isi tabel tetap sama persis.
+- `app/login/LoginCard.tsx` — tidak disentuh (sudah modern, lihat bagian 2).
+  `public/background_pltu.png` (file lokal) tetap tidak terpakai — halaman
+  Login memakai salinannya di Supabase Storage, bukan file lokal ini; ini
+  bukan bug baru, hanya dicatat supaya tidak dikira aset yang hilang.
