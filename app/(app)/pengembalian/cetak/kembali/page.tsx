@@ -19,6 +19,7 @@ type Row = {
       no_badge: string | null;
       no_erp: string | null;
       departemen: string | null;
+      status_badge: string | null;
       jabatan_deskripsi: string | null;
     } | null;
   } | null;
@@ -49,7 +50,7 @@ export default async function CetakKembaliPage({
   // khusus kartu yang secara fisik kembali (KEMBALI atau RUSAK-tapi-kembali).
   const { data } = await supabase
     .from("pengembalian_detail")
-    .select("kondisi, pengembalian(tanggal, petugas, batch, urutan, departemen, peserta(id, nama, no_badge, no_erp, departemen, jabatan_deskripsi))")
+    .select("kondisi, pengembalian(tanggal, petugas, batch, urutan, departemen, peserta(id, nama, no_badge, no_erp, departemen, status_badge, jabatan_deskripsi))")
     .eq("item", "KARTU")
     .neq("kondisi", "HILANG");
 
@@ -59,6 +60,7 @@ export default async function CetakKembaliPage({
   const rowsBeforeBatch = ((data ?? []) as unknown as Row[]).filter((r) => {
     const p = r.pengembalian?.peserta;
     if (!p) return false;
+    if (p.status_badge === "ACTIVE") return false;
     if (dept && p.departemen !== dept) return false;
     if (qLower && !(`${p.nama} ${p.no_badge ?? ""} ${p.no_erp ?? ""}`.toLowerCase().includes(qLower))) return false;
     return true;
