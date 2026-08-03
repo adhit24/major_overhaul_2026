@@ -14,8 +14,8 @@ function batchForTanggal(tanggal) {
 }
 
 const checks = [
-  ["2026-08-03", 7],
-  ["2026-08-04", 8],
+  ["2026-08-02", 7],
+  ["2026-08-03", 8],
 ];
 
 for (const [tanggal, expected] of checks) {
@@ -25,8 +25,8 @@ for (const [tanggal, expected] of checks) {
   }
 }
 
-if (!cutoffs.some((c) => c.through === "2026-08-03" && c.batch === 7)) {
-  throw new Error('Missing cutoff { through: "2026-08-03", batch: 7 }');
+if (!cutoffs.some((c) => c.through === "2026-08-02" && c.batch === 7)) {
+  throw new Error('Missing cutoff { through: "2026-08-02", batch: 7 }');
 }
 
 console.log("batch cutoff behavior ok");
