@@ -16,7 +16,7 @@ function batchForTanggal(tanggal) {
 const checks = [
   ["2026-08-01", 6],
   ["2026-08-02", 6],
-  ["2026-08-03", 8],
+  ["2026-08-03", 7],
 ];
 
 for (const [tanggal, expected] of checks) {
@@ -30,8 +30,8 @@ if (!cutoffs.some((c) => c.through === "2026-08-02" && c.batch === 6)) {
   throw new Error('Missing cutoff { through: "2026-08-02", batch: 6 }');
 }
 
-if (!cutoffs.some((c) => c.through === "2026-08-02" && c.batch === 7)) {
-  throw new Error('Missing lock marker { through: "2026-08-02", batch: 7 }');
+if (cutoffs.some((c) => c.batch === 7)) {
+  throw new Error("Batch 7 should be active, not locked in BATCH_CUTOFFS");
 }
 
 console.log("batch cutoff behavior ok");

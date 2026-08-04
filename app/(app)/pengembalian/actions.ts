@@ -14,10 +14,7 @@ const BATCH_CUTOFFS: { through: string; batch: number }[] = [
   { through: "2026-07-23", batch: 3 },
   { through: "2026-07-26", batch: 4 },
   { through: "2026-07-28", batch: 5 },
-  // Batch 7 ditutup sebagai marker lock, tetapi datanya digabungkan ke Batch 6.
-  // Entri batch 7 tetap dipertahankan agar tanggal setelah 2026-08-02 terbuka sebagai Batch 8.
   { through: "2026-08-02", batch: 6 },
-  { through: "2026-08-02", batch: 7 },
 ];
 function batchForTanggal(tanggal: string): number {
   for (const c of BATCH_CUTOFFS) if (tanggal <= c.through) return c.batch;
