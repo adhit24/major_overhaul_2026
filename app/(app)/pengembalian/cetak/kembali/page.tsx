@@ -108,7 +108,7 @@ export default async function CetakKembaliPage({
   if (tanpaDivisi.length > 0) sections.push({ dept: "Tanpa Divisi", rows: tanpaDivisi });
 
   const grandTotal = rows.length;
-  const dicetak = new Date().toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" });
+  const dicetak = new Date().toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short", timeZone: "Asia/Jakarta" });
 
   return (
     <main className="mx-auto max-w-5xl bg-white p-8 text-slate-900 print:p-0">

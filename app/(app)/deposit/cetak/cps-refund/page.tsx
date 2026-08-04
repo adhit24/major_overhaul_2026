@@ -84,7 +84,7 @@ export default async function CetakCpsRefundPage() {
   const standingBalanceTotal = totalDeposit - totalDikembalikanCps;
   const selisihKartuTotal = totalKembali - totalKartuDicairkanCps;
 
-  const dicetak = new Date().toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" });
+  const dicetak = new Date().toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short", timeZone: "Asia/Jakarta" });
 
   return (
     <main className="mx-auto max-w-5xl bg-white p-8 text-slate-900 print:p-0">

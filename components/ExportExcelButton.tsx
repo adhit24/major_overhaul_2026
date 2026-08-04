@@ -29,7 +29,7 @@ export function ExportExcelButton({ title, subtitle, rows, filename }: Props) {
     setBusy(true);
     try {
       const XLSX = await import("xlsx");
-      const dicetak = new Date().toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" });
+      const dicetak = new Date().toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short", timeZone: "Asia/Jakarta" });
 
       // satu blok tabel per departemen (SECTION), diikuti baris SUBTOTAL, lalu
       // GRAND TOTAL di akhir - mengikuti urutan kemunculan di `rows` (caller

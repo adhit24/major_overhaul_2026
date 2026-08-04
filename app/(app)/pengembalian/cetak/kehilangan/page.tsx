@@ -83,7 +83,7 @@ export default async function CetakKehilanganPage({
 
   const grandTotal = rows.length;
   const grandTotalPotongan = rows.reduce((s, r) => s + Number(r.potongan), 0);
-  const dicetak = new Date().toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short" });
+  const dicetak = new Date().toLocaleString("id-ID", { dateStyle: "long", timeStyle: "short", timeZone: "Asia/Jakarta" });
 
   return (
     <main className="mx-auto max-w-5xl bg-white p-8 text-slate-900 print:p-0">
