@@ -23,6 +23,17 @@ type RefundRow = {
   keterangan: string | null;
 };
 
+const SECTION_COLORS: Record<string, { header: string; subtotalBorder: string }> = {
+  "BOILER": {
+    header: "bg-emerald-900",
+    subtotalBorder: "border-emerald-900",
+  },
+  "TBN-BOP": {
+    header: "bg-orange-800",
+    subtotalBorder: "border-orange-800",
+  },
+};
+
 export default async function CetakCpsRefundPage() {
   const supabase = await createClient();
 
@@ -123,9 +134,13 @@ export default async function CetakCpsRefundPage() {
         const dikembalikan = section.rows.reduce((s, r) => s + Number(r.jumlah_uang), 0);
         const kartuKembali = kartuKembaliByDept.get(section.dept) ?? 0;
         const kartuDicairkan = section.rows.reduce((s, r) => s + r.jumlah_kartu, 0);
+        const sectionColor = SECTION_COLORS[section.dept] ?? {
+          header: "bg-brand-700",
+          subtotalBorder: "border-brand-700",
+        };
         return (
           <section key={section.dept} className="mt-6" style={{ breakInside: "avoid" }}>
-            <h2 className="bg-brand-700 px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-white">
+            <h2 className={`${sectionColor.header} px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-white`}>
               SECTION {si + 1}: {section.dept}
             </h2>
             <p className="mt-1 text-[10px] text-slate-500">
@@ -166,7 +181,7 @@ export default async function CetakCpsRefundPage() {
                       <td className="px-1.5 py-1 break-words">{r.keterangan ?? "-"}</td>
                     </tr>
                   ))}
-                  <tr className="border-t-2 border-brand-700 font-semibold">
+                  <tr className={`border-t-2 ${sectionColor.subtotalBorder} font-semibold`}>
                     <td className="px-1.5 py-1.5 text-right" colSpan={1}>SUBTOTAL {section.dept}</td>
                     <td className="px-1.5 py-1.5 tabular-nums">{kartuDicairkan}</td>
                     <td className="px-1.5 py-1.5 tabular-nums whitespace-nowrap">{formatRupiah(dikembalikan)}</td>
